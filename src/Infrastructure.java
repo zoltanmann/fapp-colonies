@@ -10,15 +10,37 @@ import java.util.Set;
 
 public class Infrastructure {
 	private Set<IHwNode> nodes;
+	private Set<Server> servers;
+	private Set<EndDevice> endDevices;
 	private Map2d<IHwNode,IHwNode,Set<Path>> paths;
 
 	public Infrastructure() {
 		nodes=new HashSet<>();
+		servers=new HashSet<>();
+		endDevices=new HashSet<>();
 		paths=new Map2d<>();
 	}
 
-	public void addNode(IHwNode node) {
-		nodes.add(node);
+	public void addServer(Server s) {
+		nodes.add(s);
+		servers.add(s);
+	}
+
+	public void addEndDevice(EndDevice dev) {
+		nodes.add(dev);
+		endDevices.add(dev);
+	}
+
+	public Set<IHwNode> getNodes() {
+		return nodes;
+	}
+
+	public Set<Server> getServers() {
+		return servers;
+	}
+
+	public Set<EndDevice> getEndDevices() {
+		return endDevices;
 	}
 
 	public void determinePaths(int k) {
@@ -52,7 +74,10 @@ public class Infrastructure {
 		for(IHwNode node : visitedThrough.keySet()) {
 			//if(node==start)
 			//	continue;
-			Path path=new Path(node.getId()+"-"+start.getId(),node);
+			String pathId=node.getId()+"-"+start.getId();
+			if(paths.containsKey(node, start))
+				pathId=pathId+(paths.get(node, start).size()+1);
+			Path path=new Path(pathId,node);
 			IHwNode n=node;
 			while(n!=start) {
 				Link l=visitedThrough.get(n);

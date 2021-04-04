@@ -11,6 +11,8 @@ public class Connector {
 		this.maxLatency = maxLatency;
 		this.v1=v1;
 		this.v2=v2;
+		v1.addConnector(this);
+		v2.addConnector(this);
 	}
 
 	public double getBwReq() {
@@ -31,5 +33,9 @@ public class Connector {
 
 	public String getId() {
 		return id;
+	}
+
+	public String toString() {
+		return v1.getId()+"-"+v2.getId();
 	}
 }

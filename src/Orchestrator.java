@@ -13,15 +13,11 @@ import gurobi.GRBVar;
 
 public class Orchestrator {
 	private Infrastructure infra;
-	private Set<Server> servers;
-	private Set<EndDevice> endDevices;
 	private Set<Component> components;
 	private Map<Component,Server> compMapping;
 
-	public Orchestrator(Infrastructure infra, Set<Server> servers, Set<EndDevice> endDevices) {
+	public Orchestrator(Infrastructure infra) {
 		this.infra=infra;
-		this.servers=servers;
-		this.endDevices=endDevices;
 		components=new HashSet<>();
 		compMapping=new HashMap<>();
 	}
@@ -35,19 +31,19 @@ public class Orchestrator {
 			allConnectors.addAll(comp.getConnectors());
 		}
 		Set<ISwNode> allSwNodes=new HashSet<>(allComponents);
-		allSwNodes.addAll(endDevices);
-		Set<IHwNode> allHwNodes=new HashSet<>(servers);
-		allHwNodes.addAll(endDevices);
+		allSwNodes.addAll(infra.getEndDevices());
+		Set<IHwNode> allHwNodes=new HashSet<>(infra.getServers());
+		allHwNodes.addAll(infra.getEndDevices());
 		Set<Path> allPaths=new HashSet<>();
 		for(IHwNode n1 : allHwNodes) {
 			for(IHwNode n2 : allHwNodes) {
-				if(n1==n2)
-					continue;
+				//if(n1==n2)
+				//	continue;
 				allPaths.addAll(infra.getPaths(n1, n2));
 			}
 		}
 		Set<Link> allLinks=new HashSet<>();
-		for(Server s : servers) {
+		for(Server s : infra.getServers()) {
 			allLinks.addAll(s.getLinks());
 		}
 		//creating variables
@@ -63,6 +59,8 @@ public class Orchestrator {
 					x.put(sn,hn,var);
 				}
 			}
+			//System.out.println("allConnectors: "+allConnectors);
+			//System.out.println("allPaths: "+allPaths);
 			for(Connector conn : allConnectors) {
 				for(Path path : allPaths) {
 					GRBVar var=model.addVar(0,1,0,GRB.BINARY,"y_"+conn.getId()+"_"+path.getId());
@@ -76,12 +74,12 @@ public class Orchestrator {
 			//(9)-(10) each component on exactly one server and on no end device
 			for(Component comp : allComponents) {
 				GRBLinExpr expr = new GRBLinExpr();
-				for(Server s : servers) {
+				for(Server s : infra.getServers()) {
 					GRBVar var=x.get(comp,s);
 					expr.addTerm(1,var);
 				}
 				model.addConstr(expr,GRB.EQUAL,1,"Exactly1_"+comp.getId());
-				for(EndDevice dev : endDevices) {
+				for(EndDevice dev : infra.getEndDevices()) {
 					expr = new GRBLinExpr();
 					GRBVar var=x.get(comp,dev);
 					expr.addTerm(1,var);
@@ -98,7 +96,7 @@ public class Orchestrator {
 				model.addConstr(expr,GRB.EQUAL,1,"Exactly1_"+conn.getId());
 			}
 			//(12)-(13) each end device on itself
-			for(EndDevice dev : endDevices) {
+			for(EndDevice dev : infra.getEndDevices()) {
 				for(IHwNode hn : allHwNodes) {
 					GRBLinExpr expr = new GRBLinExpr();
 					GRBVar var=x.get(dev,hn);
@@ -115,11 +113,16 @@ public class Orchestrator {
 					for(IHwNode n2 : allHwNodes) {
 						GRBLinExpr expr = new GRBLinExpr();
 						for(Path p : infra.getPaths(n1, n2)) {
+							//System.out.println("conn: "+conn);
+							//System.out.println("p: "+p);
 							GRBVar yVar=y.get(conn, p);
+							//System.out.println("yVar: "+yVar);
 							expr.addTerm(1,yVar);
 						}
 						GRBVar x1=x.get(conn.getV1(), n1);
+						//System.out.println("x1: "+x1);
 						GRBVar x2=x.get(conn.getV2(), n2);
+						//System.out.println("x2: "+x2);
 						expr.addTerm(-1,x1);
 						expr.addTerm(-1,x2);
 						model.addConstr(expr,GRB.GREATER_EQUAL,-1,"Consistent_"+conn.getId()+"_"+n1.getId()+"_"+n2.getId());
@@ -127,7 +130,7 @@ public class Orchestrator {
 				}
 			}
 			//(15)-(16) node capacity constraints
-			for(Server s : servers) {
+			for(Server s : infra.getServers()) {
 				GRBLinExpr expr1 = new GRBLinExpr();
 				GRBLinExpr expr2 = new GRBLinExpr();
 				for(Component c : allComponents) {
@@ -177,10 +180,11 @@ public class Orchestrator {
 				model.write("solution.sol");
 				//retrieve solution
 				for(Component comp : allComponents) {
-					for(Server s : servers) {
+					for(Server s : infra.getServers()) {
 						GRBVar var=x.get(comp,s);
 						if(var.get(GRB.DoubleAttr.X)>0.5) {
 							compMapping.put(comp,s);
+							components.add(comp);
 							break;
 						}
 					}

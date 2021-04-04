@@ -33,4 +33,8 @@ public class Component implements ISwNode {
 	public void addConnector(Connector conn) {
 		connectors.add(conn);
 	}
+
+	public String toString() {
+		return id+"("+cpuReq+","+ramReq+")";
+	}
 }

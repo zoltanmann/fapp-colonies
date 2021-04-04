@@ -4,10 +4,12 @@ import java.util.Set;
 public class EndDevice implements ISwNode, IHwNode {
 	private String id;
 	private Set<Link> links;
+	private Set<Connector> connectors;
 
 	public EndDevice(String id) {
 		this.id=id;
 		links=new HashSet<>();
+		connectors=new HashSet<>();
 	}
 
 	public Set<Link> getLinks() {
@@ -16,6 +18,10 @@ public class EndDevice implements ISwNode, IHwNode {
 
 	public void addLink(Link link) {
 		links.add(link);
+	}
+
+	public void addConnector(Connector c) {
+		connectors.add(c);
 	}
 
 	public String getId() {
