@@ -24,6 +24,10 @@ public class EndDevice implements ISwNode, IHwNode {
 		connectors.add(c);
 	}
 
+	public Set<Connector> getConnectors() {
+		return connectors;
+	}
+
 	public String getId() {
 		return id;
 	}

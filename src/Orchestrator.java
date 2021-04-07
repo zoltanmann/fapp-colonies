@@ -22,7 +22,9 @@ public class Orchestrator {
 		compMapping=new HashMap<>();
 	}
 
-	public void addApplication(Set<Component> app) {
+	public Result addApplication(Set<Component> app) {
+		long startTime=System.currentTimeMillis();
+		Result result=new Result();
 		//preparing collections
 		Set<Component> allComponents=new HashSet<>(components);
 		allComponents.addAll(app);
@@ -173,11 +175,14 @@ public class Orchestrator {
 				model.addConstr(expr,GRB.EQUAL,1,"Migr_"+c);
 			}
 			//perform optimization
-			model.write("model.lp");
+			//model.write("model.lp");
 			model.getEnv().set(GRB.DoubleParam.TimeLimit,60);
+			model.getEnv().set(GRB.IntParam.LogToConsole,0);
 			model.optimize();
 			if(model.get(IntAttr.SolCount)>0) {
-				model.write("solution.sol");
+				//model.write("solution.sol");
+				result.success=true;
+				result.migrations=Math.round(model.get(GRB.DoubleAttr.ObjVal));
 				//retrieve solution
 				for(Component comp : allComponents) {
 					for(Server s : infra.getServers()) {
@@ -189,10 +194,17 @@ public class Orchestrator {
 						}
 					}
 				}
+			} else {
+				result.success=false;
+				result.migrations=0;
 			}
 		} catch (GRBException e) {
 			e.printStackTrace();
+			result.success=false;
+			result.migrations=0;
 		}
+		result.timeMs=System.currentTimeMillis()-startTime;
+		return result;
 	}
 
 	public void print() {

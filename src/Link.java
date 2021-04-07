@@ -5,8 +5,20 @@ public class Link {
 	private double latency;
 	private IHwNode v1,v2;
 
-	public Link(String id, double bw, double latency, IHwNode v1, IHwNode v2) {
-		this.id=id;
+	public Link(double bw, double latency, IHwNode v1, IHwNode v2) {
+		id=v1.getId()+"-"+v2.getId();
+		boolean idAlreadyExists;
+		do {
+			idAlreadyExists=false;
+			for(Link l : v1.getLinks()) {
+				if(l.getId().equals(id)) {
+					idAlreadyExists=true;
+					break;
+				}
+			}
+			if(idAlreadyExists)
+				id=id+"'";
+		} while(idAlreadyExists);
 		this.bw = bw;
 		this.latency = latency;
 		this.v1=v1;

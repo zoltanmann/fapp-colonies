@@ -76,7 +76,7 @@ public class Infrastructure {
 			//	continue;
 			String pathId=node.getId()+"-"+start.getId();
 			if(paths.containsKey(node, start))
-				pathId=pathId+(paths.get(node, start).size()+1);
+				pathId=pathId+("~"+paths.get(node, start).size()+1);
 			Path path=new Path(pathId,node);
 			IHwNode n=node;
 			while(n!=start) {

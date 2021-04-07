@@ -5,8 +5,20 @@ public class Connector {
 	private double maxLatency;
 	private ISwNode v1,v2;
 
-	public Connector(String id, double bwReq, double maxLatency, ISwNode v1, ISwNode v2) {
-		this.id=id;
+	public Connector(double bwReq, double maxLatency, ISwNode v1, ISwNode v2) {
+		id=v1.getId()+"-"+v2.getId();
+		boolean idAlreadyExists;
+		do {
+			idAlreadyExists=false;
+			for(Connector c : v1.getConnectors()) {
+				if(c.getId().equals(id)) {
+					idAlreadyExists=true;
+					break;
+				}
+			}
+			if(idAlreadyExists)
+				id=id+"'";
+		} while(idAlreadyExists);
 		this.bwReq = bwReq;
 		this.maxLatency = maxLatency;
 		this.v1=v1;
