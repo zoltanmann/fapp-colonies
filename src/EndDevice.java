@@ -20,6 +20,10 @@ public class EndDevice implements ISwNode, IHwNode {
 		links.add(link);
 	}
 
+	public void removeLink(Link link) {
+		links.remove(link);
+	}
+
 	public void addConnector(Connector c) {
 		connectors.add(c);
 	}

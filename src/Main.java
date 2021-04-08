@@ -8,11 +8,12 @@ import java.util.Random;
 import java.util.Set;
 
 public class Main {
-	private static int nrFogNodesPerRegion=15;///
-	private static int nrEndDevicesPerRegion=10;
-	private static int nrAppsPerRegion=10;
-	private static int nrRegions=15;///
-	private static int appSize=5;
+	private static int nrFogNodesPerRegion=5;///
+	private static int nrEndDevicesPerRegion=5;///
+	private static int nrAppsPerRegion=3;///
+	private static int nrRegions=5;///
+	private static int appSize=3;///
+	private static int compGrade=1;
 	private static Random random;
 	private static Server cloud;
 
@@ -35,22 +36,27 @@ public class Main {
 		for(int i=0;i<50;i++) {
 			Server s1=serverList.get(random.nextInt(serverList.size()));
 			Server s2=serverList.get(random.nextInt(serverList.size()));
+			if(s1==s2)
+				continue;
 			double bw=random.nextDouble()*4+1;
 			double latency=random.nextDouble()*4+1;
 			new Link(bw,latency,s1,s2);
 		}
+		for(int i=0;i<nrEndDevicesPerRegion;i++) {
+			EndDevice d=new EndDevice("d"+index+"."+i);
+			for(int j=0;j<3;j++) { ///
+				Server s=serverList.get(random.nextInt(serverList.size()));
+				double bw=random.nextDouble()*5+5;
+				double latency=random.nextDouble()*3;
+				new Link(bw,latency,s,d);
+			}
+			infra.addEndDevice(d);
+		}
 		Server s=serverList.get(random.nextInt(serverList.size()));
 		double bw=random.nextDouble()*4+1;
 		double latency=random.nextDouble()*50+50;
+		infra.addServer(cloud);
 		new Link(bw,latency,s,cloud);
-		for(int i=0;i<nrEndDevicesPerRegion;i++) {
-			EndDevice d=new EndDevice("d"+index+"."+i);
-			s=serverList.get(random.nextInt(serverList.size()));
-			bw=random.nextDouble()*5+5;
-			latency=random.nextDouble()*3;
-			new Link(bw,latency,s,d);
-			infra.addEndDevice(d);
-		}
 		return infra;
 	}
 
@@ -64,26 +70,30 @@ public class Main {
 		new Link(bw,latency,s1,s2);
 	}
 
-	private static Infrastructure[] createInfra() {
+	private static Infrastructure[] createInfraModel2() {
 		cloud=new Server("cloud", 1000000, 1000000);
 		Infrastructure[] infra=new Infrastructure[nrRegions];
 		for(int i=0;i<nrRegions;i++) {
 			infra[i]=createRegion(i);
+			infra[i].pruneParallelLinks();
+			infra[i].determinePaths(2);
+			infra[i].print();
 		}
+		return infra;
+	}
+
+	private static Infrastructure createInfraModel1(Infrastructure[] regions) {
 		for(int i=0;i<nrRegions;i++) {
 			int i1=random.nextInt(nrRegions);
 			int i2=random.nextInt(nrRegions);
 			if(i1!=i)
-				connectRegions(infra[i], infra[i1]);
+				connectRegions(regions[i], regions[i1]);
 			if(i2!=i)
-				connectRegions(infra[i], infra[i2]);
+				connectRegions(regions[i], regions[i2]);
 		}
-		for(int i=0;i<nrRegions;i++) {
-			infra[i].addServer(cloud);
-		}
-		for(int i=0;i<nrRegions;i++) {
-			infra[i].determinePaths(2);
-		}
+		Infrastructure infra=Infrastructure.unite(regions);
+		infra.pruneParallelLinks();
+		infra.determinePaths(2);
 		return infra;
 	}
 
@@ -117,7 +127,7 @@ public class Main {
 			app[i]=new Component(idPrefix+i, cpuReq, ramReq);
 		}
 		for(int i=0;i<appSize;i++) {
-			while(app[i].getConnectors().size()<2) {
+			while(app[i].getConnectors().size()<compGrade) {
 				int i0=random.nextInt(appSize);
 				if(i0!=i) {
 					double bwReq=random.nextDouble()*3;
@@ -172,8 +182,7 @@ public class Main {
 	}
 
 	private static void doModel1(Infrastructure[] regions, Map2d<Infrastructure,Integer,Set<Component>> apps) throws IOException {
-		Infrastructure infra=Infrastructure.unite(regions);
-		infra.determinePaths(2);
+		Infrastructure infra=createInfraModel1(regions);
 		Orchestrator orchestrator=new Orchestrator(infra);
 		FileWriter fileWriter=new FileWriter("results_model1.csv");
 		fileWriter.write("App;Success;TimeMs;Migrations\n");
@@ -197,9 +206,9 @@ public class Main {
 
 	public static void main(String[] args) throws IOException {
 		random=new Random();
-		Infrastructure[] regions=createInfra();
+		Infrastructure[] regions=createInfraModel2();
 		Map2d<Infrastructure,Integer,Set<Component>> apps=createApps(regions);
-		//doModel2(regions, apps);
+		doModel2(regions, apps);
 		doModel1(regions, apps);
 		/*
 		Set<Component> app=new HashSet<>();

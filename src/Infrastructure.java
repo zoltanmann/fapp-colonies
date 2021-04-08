@@ -13,12 +13,16 @@ public class Infrastructure {
 	private Set<Server> servers;
 	private Set<EndDevice> endDevices;
 	private Map2d<IHwNode,IHwNode,Set<Path>> paths;
+	private Set<Path> allPaths;
+	private Map<Link,Set<Path>> pathsOfLink;
 
 	public Infrastructure() {
 		nodes=new HashSet<>();
 		servers=new HashSet<>();
 		endDevices=new HashSet<>();
 		paths=new Map2d<>();
+		allPaths=new HashSet<>();
+		pathsOfLink=new HashMap<>();
 	}
 
 	public void addServer(Server s) {
@@ -50,6 +54,20 @@ public class Infrastructure {
 			}
 		}
 		prunePaths();
+		for(IHwNode n1 : nodes) {
+			for(IHwNode n2 : nodes) {
+				//if(n1==n2)
+				//	continue;
+				allPaths.addAll(paths.get(n1, n2));
+			}
+		}
+		for(Path path : allPaths) {
+			for(Link l : path.getLinks()) {
+				if(!pathsOfLink.containsKey(l))
+					pathsOfLink.put(l,new HashSet<>());
+				pathsOfLink.get(l).add(path);
+			}
+		}
 	}
 
 	private void determinePathsFromNode(IHwNode start) {
@@ -64,6 +82,8 @@ public class Infrastructure {
 			Collections.shuffle(links); //randomize so that different runs may lead to different paths
 			for(Link link : links) {
 				IHwNode node2=link.getOtherNode(node);
+				if(!nodes.contains(node2))
+					continue; //ignore nodes in other regions
 				if(!visitedThrough.containsKey(node2)) {
 					visitedThrough.put(node2,link);
 					toVisit.offer(node2);
@@ -114,6 +134,14 @@ public class Infrastructure {
 		return paths.get(n1, n2);
 	}
 
+	public Set<Path> getAllPaths() {
+		return allPaths;
+	}
+
+	public Set<Path> getPathsOfLink(Link l) {
+		return pathsOfLink.get(l);
+	}
+
 	public void print() {
 		System.out.println("Nodes: "+nodes);
 		System.out.println("Paths: "+paths);
@@ -127,5 +155,33 @@ public class Infrastructure {
 			infra.endDevices.addAll(region.endDevices);
 		}
 		return infra;
+	}
+
+	public void pruneParallelLinks() {
+		for(IHwNode node : nodes) {
+			Map<IHwNode,Link> neighbors=new HashMap<>();
+			Set<Link> linksToPrune=new HashSet<>();
+			for(Link link : node.getLinks()) {
+				IHwNode neighbor=link.getOtherNode(node);
+				if(neighbors.containsKey(neighbor))
+					linksToPrune.add(link);
+				neighbors.put(neighbor,link);
+			}
+			for(Link link : linksToPrune) {
+				link.getV1().removeLink(link);
+				link.getV2().removeLink(link);
+			}
+		}
+	}
+
+	public Set<Link> getAllInternalLinks() {
+		Set<Link> links=new HashSet<>();
+		for(IHwNode node : nodes) {
+			for(Link link : node.getLinks()) {
+				if(nodes.contains(link.getOtherNode(node)))
+					links.add(link);
+			}
+		}
+		return links;
 	}
 }

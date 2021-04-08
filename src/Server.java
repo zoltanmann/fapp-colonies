@@ -34,6 +34,10 @@ public class Server implements IHwNode {
 		links.add(link);
 	}
 
+	public void removeLink(Link link) {
+		links.remove(link);
+	}
+
 	public String toString() {
 		return id+"("+cpuCap+","+ramCap+")";
 	}

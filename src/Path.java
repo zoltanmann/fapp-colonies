@@ -56,4 +56,8 @@ public class Path {
 	public double getLatency() {
 		return latency;
 	}
+
+	public List<Link> getLinks() {
+		return links;
+	}
 }
