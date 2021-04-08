@@ -2,3 +2,4 @@ bin/
 model.lp
 solution.sol
 *.csv
+output.txt

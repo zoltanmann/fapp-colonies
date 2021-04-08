@@ -63,8 +63,11 @@ public class Main {
 	private static void connectRegions(Infrastructure region1, Infrastructure region2) {
 		List<Server> serverList1=new ArrayList<Server>(region1.getServers());
 		List<Server> serverList2=new ArrayList<Server>(region2.getServers());
-		Server s1=serverList1.get(random.nextInt(serverList1.size()));
-		Server s2=serverList2.get(random.nextInt(serverList2.size()));
+		Server s1,s2;
+		do {
+			s1=serverList1.get(random.nextInt(serverList1.size()));
+			s2=serverList2.get(random.nextInt(serverList2.size()));
+		} while(s1==s2);
 		double bw=random.nextDouble()*4+1;
 		double latency=random.nextDouble()*4+1;
 		new Link(bw,latency,s1,s2);
@@ -77,7 +80,7 @@ public class Main {
 			infra[i]=createRegion(i);
 			infra[i].pruneParallelLinks();
 			infra[i].determinePaths(2);
-			infra[i].print();
+			//infra[i].print();
 		}
 		return infra;
 	}
