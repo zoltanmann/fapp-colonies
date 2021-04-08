@@ -178,6 +178,7 @@ public class Orchestrator {
 			//model.write("model.lp");
 			model.getEnv().set(GRB.DoubleParam.TimeLimit,60);
 			model.getEnv().set(GRB.IntParam.LogToConsole,0);
+			System.out.println("Running model.optimize()");
 			model.optimize();
 			if(model.get(IntAttr.SolCount)>0) {
 				//model.write("solution.sol");

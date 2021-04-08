@@ -8,10 +8,10 @@ import java.util.Random;
 import java.util.Set;
 
 public class Main {
-	private static int nrFogNodesPerRegion=30;
+	private static int nrFogNodesPerRegion=15;///
 	private static int nrEndDevicesPerRegion=10;
 	private static int nrAppsPerRegion=10;
-	private static int nrRegions=30;
+	private static int nrRegions=15;///
 	private static int appSize=5;
 	private static Random random;
 	private static Server cloud;
@@ -134,31 +134,73 @@ public class Main {
 		return new HashSet<Component>(Arrays.asList(app));
 	}
 
-	public static void main(String[] args) throws IOException {
-		random=new Random();
-		Infrastructure[] regions=createInfra();
+	private static Map2d<Infrastructure,Integer,Set<Component>> createApps(Infrastructure[] regions) {
+		Map2d<Infrastructure,Integer,Set<Component>> apps=new Map2d<Infrastructure,Integer,Set<Component>>();
+		for(int j=0;j<nrAppsPerRegion;j++) {
+			for(int i=0;i<nrRegions;i++) {
+				Set<Component> app=createApp(regions[i], "c"+i+"."+j+".");
+				apps.put(regions[i], j, app);
+			}
+		}
+		return apps;
+	}
+
+	private static void doModel2(Infrastructure[] regions, Map2d<Infrastructure,Integer,Set<Component>> apps) throws IOException {
 		Orchestrator[] orchestrators=new Orchestrator[nrRegions];
 		for(int i=0;i<nrRegions;i++)
 			orchestrators[i]=new Orchestrator(regions[i]);
 		FileWriter fileWriter=new FileWriter("results_model2.csv");
 		fileWriter.write("App;Success;TimeMs;Migrations\n");
 		for(int j=0;j<nrAppsPerRegion;j++) {
-			double totalSuccess=0;
-			double totalTimeMs=0;
-			double totalMigrations=0;
+			long totalSuccess=0;
+			long totalTimeMs=0;
+			long totalMigrations=0;
 			for(int i=0;i<nrRegions;i++) {
-				System.out.println("Region "+i+", app "+j);
-				Set<Component> app=createApp(regions[i], "c"+i+"."+j+".");
+				System.out.println("Model 2, Region "+i+", app "+j);
+				Set<Component> app=apps.get(regions[i],j);
 				Result result=orchestrators[i].addApplication(app);
 				totalSuccess+=result.success?1:0;
 				totalTimeMs+=result.timeMs;
 				totalMigrations+=result.migrations;
 			}
 			//fileWriter.write(""+j+";"+totalSuccess/nrRegions+";"+totalTimeMs/nrRegions+";"+totalMigrations/nrRegions+"\n");
-			fileWriter.write(String.format("%d;%.2f;%.2f;%.2f\n",j,totalSuccess/nrRegions,totalTimeMs/nrRegions,totalMigrations/nrRegions));
+			//fileWriter.write(String.format("%d;%.2f;%.2f;%.2f\n",j,totalSuccess/nrRegions,totalTimeMs/nrRegions,totalMigrations/nrRegions));
+			fileWriter.write(String.format("%d;%d;%d;%d\n",j,totalSuccess,totalTimeMs,totalMigrations));
 			fileWriter.flush();
 		}
 		fileWriter.close();
+	}
+
+	private static void doModel1(Infrastructure[] regions, Map2d<Infrastructure,Integer,Set<Component>> apps) throws IOException {
+		Infrastructure infra=Infrastructure.unite(regions);
+		infra.determinePaths(2);
+		Orchestrator orchestrator=new Orchestrator(infra);
+		FileWriter fileWriter=new FileWriter("results_model1.csv");
+		fileWriter.write("App;Success;TimeMs;Migrations\n");
+		for(int j=0;j<nrAppsPerRegion;j++) {
+			long totalSuccess=0;
+			long totalTimeMs=0;
+			long totalMigrations=0;
+			for(int i=0;i<nrRegions;i++) {
+				System.out.println("Model 1, Region "+i+", app "+j);
+				Set<Component> app=apps.get(regions[i],j);
+				Result result=orchestrator.addApplication(app);
+				totalSuccess+=result.success?1:0;
+				totalTimeMs+=result.timeMs;
+				totalMigrations+=result.migrations;
+			}
+			fileWriter.write(String.format("%d;%d;%d;%d\n",j,totalSuccess,totalTimeMs,totalMigrations));
+			fileWriter.flush();
+		}
+		fileWriter.close();
+	}
+
+	public static void main(String[] args) throws IOException {
+		random=new Random();
+		Infrastructure[] regions=createInfra();
+		Map2d<Infrastructure,Integer,Set<Component>> apps=createApps(regions);
+		//doModel2(regions, apps);
+		doModel1(regions, apps);
 		/*
 		Set<Component> app=new HashSet<>();
 		Component c1=new Component("c1",1,1);

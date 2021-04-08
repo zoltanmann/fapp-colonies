@@ -118,4 +118,14 @@ public class Infrastructure {
 		System.out.println("Nodes: "+nodes);
 		System.out.println("Paths: "+paths);
 	}
+
+	public static Infrastructure unite(Infrastructure[] regions) {
+		Infrastructure infra=new Infrastructure();
+		for(Infrastructure region : regions) {
+			infra.nodes.addAll(region.nodes);
+			infra.servers.addAll(region.servers);
+			infra.endDevices.addAll(region.endDevices);
+		}
+		return infra;
+	}
 }
