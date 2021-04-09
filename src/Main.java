@@ -16,6 +16,8 @@ public class Main {
 	private static int compGrade=1;
 	private static Random random;
 	private static Server cloud;
+	private static Infrastructure infra;
+	private static Set<Colony> colonies;
 
 	private static Infrastructure createRegion(int index) {
 		Infrastructure infra=new Infrastructure();
