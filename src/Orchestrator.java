@@ -22,13 +22,14 @@ public class Orchestrator {
 		compMapping=new HashMap<>();
 	}
 
-	public Result addApplication(Set<Component> app) {
+	public Result addApplication(Application app) {
 		long startTime=System.currentTimeMillis();
 		long t=System.currentTimeMillis();
 		Result result=new Result();
 		//preparing collections
 		Set<Component> allComponents=new HashSet<>(components);
-		allComponents.addAll(app);
+		for(int i=0;i<app.getSize();i++)
+			allComponents.add(app.getComponent(i));
 		Set<Connector> allConnectors=new HashSet<>();
 		for(Component comp : allComponents) {
 			allConnectors.addAll(comp.getConnectors());
@@ -149,11 +150,14 @@ public class Orchestrator {
 			t=System.currentTimeMillis();
 			//(17) bandwidth constraints
 			for(Link l : allLinks) {
+				//System.out.println("l: "+l.getId());
 				GRBLinExpr expr = new GRBLinExpr();
 				if(infra.getPathsOfLink(l)==null)
 					System.out.println("NULL: "+l.getId());
 				for(Path p : infra.getPathsOfLink(l)) {
+					//System.out.println("p: "+p);
 					for(Connector conn : allConnectors) {
+						//System.out.println("conn: "+conn);
 						GRBVar yVar=y.get(conn, p);
 						expr.addTerm(conn.getBwReq(), yVar);
 					}

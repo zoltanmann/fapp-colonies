@@ -60,4 +60,8 @@ public class Path {
 	public List<Link> getLinks() {
 		return links;
 	}
+
+	public List<IHwNode> getNodes() {
+		return nodes;
+	}
 }

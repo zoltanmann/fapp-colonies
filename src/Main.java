@@ -1,11 +1,6 @@
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Random;
-import java.util.Set;
 
 public class Main {
 	private static int nrFogNodesPerRegion=5;///
@@ -14,30 +9,50 @@ public class Main {
 	private static int nrRegions=5;///
 	private static int appSize=3;///
 	private static int compGrade=1;
-	private static Random random;
+	private static int nrAdditionalLinks=10;///
+	private static int nrNeighborsOfEndDevice=3;
+	public static Random random;
 	private static Server cloud;
 	private static Infrastructure infra;
-	private static Set<Colony> colonies;
+	private static Colony colonies[];
 
-	private static Infrastructure createRegion(int index) {
-		Infrastructure infra=new Infrastructure();
+	private static void createInfra() {
+		infra=new Infrastructure();
+		cloud=new Server("cloud", 1000000, 1000000);
+		infra.addServer(cloud);
+		colonies=new Colony[nrRegions];
+		for(int i=0;i<nrRegions;i++) {
+			colonies[i]=new Colony();
+			createRegion(i);
+		}
+		for(int i=0;i<nrRegions;i++) {
+			int left=(i>0)?i-1:nrRegions-1;
+			int right=(i<nrRegions-1)?i+1:0;
+			connectRegions(colonies[i],colonies[left]);
+			connectRegions(colonies[i],colonies[right]);
+		}
+		infra.pruneParallelLinks();
+		infra.determinePaths(2);
+	}
+
+	private static void createRegion(int index) {
 		for(int i=0;i<nrFogNodesPerRegion;i++) {
 			String serverId="s"+index+"."+i;
 			double cpuCap=random.nextDouble()*9+1;
 			double ramCap=random.nextDouble()*9+1;
 			Server s=new Server(serverId,cpuCap,ramCap);
-			if(infra.getServers().size()>0) {
-				Server s0=new ArrayList<Server>(infra.getServers()).get(random.nextInt(infra.getServers().size()));
+			if(i>0) {
+				Server s0=colonies[index].getRandomFogNode();
 				double bw=random.nextDouble()*4+1;
 				double latency=random.nextDouble()*4+1;
 				new Link(bw,latency,s0,s);
 			}
 			infra.addServer(s);
+			colonies[index].addFogNode(s);
 		}
-		List<Server> serverList=new ArrayList<Server>(infra.getServers());
-		for(int i=0;i<50;i++) {
-			Server s1=serverList.get(random.nextInt(serverList.size()));
-			Server s2=serverList.get(random.nextInt(serverList.size()));
+		for(int i=0;i<nrAdditionalLinks;i++) {
+			Server s1=colonies[index].getRandomFogNode();
+			Server s2=colonies[index].getRandomFogNode();
 			if(s1==s2)
 				continue;
 			double bw=random.nextDouble()*4+1;
@@ -46,164 +61,111 @@ public class Main {
 		}
 		for(int i=0;i<nrEndDevicesPerRegion;i++) {
 			EndDevice d=new EndDevice("d"+index+"."+i);
-			for(int j=0;j<3;j++) { ///
-				Server s=serverList.get(random.nextInt(serverList.size()));
+			for(int j=0;j<nrNeighborsOfEndDevice;j++) { ///
+				Server s=colonies[index].getRandomFogNode();
 				double bw=random.nextDouble()*5+5;
 				double latency=random.nextDouble()*3;
 				new Link(bw,latency,s,d);
 			}
 			infra.addEndDevice(d);
+			colonies[index].addEndDevice(d);
 		}
-		Server s=serverList.get(random.nextInt(serverList.size()));
+		Server s=colonies[index].getRandomFogNode();
 		double bw=random.nextDouble()*4+1;
 		double latency=random.nextDouble()*50+50;
-		infra.addServer(cloud);
 		new Link(bw,latency,s,cloud);
-		return infra;
 	}
 
-	private static void connectRegions(Infrastructure region1, Infrastructure region2) {
-		List<Server> serverList1=new ArrayList<Server>(region1.getServers());
-		List<Server> serverList2=new ArrayList<Server>(region2.getServers());
+	private static void connectRegions(Colony region1, Colony region2) {
+		region1.addNeighbor(region2);
+		region2.addNeighbor(region1);
 		Server s1,s2;
 		do {
-			s1=serverList1.get(random.nextInt(serverList1.size()));
-			s2=serverList2.get(random.nextInt(serverList2.size()));
+			s1=region1.getRandomFogNode();
+			s2=region2.getRandomFogNode();
 		} while(s1==s2);
 		double bw=random.nextDouble()*4+1;
 		double latency=random.nextDouble()*4+1;
 		new Link(bw,latency,s1,s2);
 	}
 
-	private static Infrastructure[] createInfraModel2() {
-		cloud=new Server("cloud", 1000000, 1000000);
-		Infrastructure[] infra=new Infrastructure[nrRegions];
-		for(int i=0;i<nrRegions;i++) {
-			infra[i]=createRegion(i);
-			infra[i].pruneParallelLinks();
-			infra[i].determinePaths(2);
-			//infra[i].print();
-		}
-		return infra;
-	}
-
-	private static Infrastructure createInfraModel1(Infrastructure[] regions) {
-		for(int i=0;i<nrRegions;i++) {
-			int i1=random.nextInt(nrRegions);
-			int i2=random.nextInt(nrRegions);
-			if(i1!=i)
-				connectRegions(regions[i], regions[i1]);
-			if(i2!=i)
-				connectRegions(regions[i], regions[i2]);
-		}
-		Infrastructure infra=Infrastructure.unite(regions);
-		infra.pruneParallelLinks();
-		infra.determinePaths(2);
-		return infra;
-	}
-
-	/*
-	private static void createInfra() {
-		infra=new Infrastructure();
-		Server s1=new Server("s1",1,1);
-		Server s2=new Server("s2",2,2);
-		Server s3=new Server("s3",3,3);
-		Server s4=new Server("s4",4,4);
-		EndDevice d1=new EndDevice("d1");
-		infra.addServer(s1);
-		infra.addServer(s2);
-		infra.addServer(s3);
-		infra.addServer(s4);
-		infra.addEndDevice(d1);
-		new Link(10, 10, s1, s2);
-		new Link(10, 10, s2, s4);
-		new Link(10, 10, s3, s1);
-		new Link(10, 10, s3, s4);
-		new Link(10, 10, s1, d1);
-		infra.determinePaths(2);
-	}
-	*/
-
-	private static Set<Component> createApp(Infrastructure region, String idPrefix) {
-		Component[] app=new Component[appSize];
+	private static Application createApp(Colony region, String idPrefix) {
+		Application app=new Application();
 		for(int i=0;i<appSize;i++) {
 			double cpuReq=random.nextDouble()*5;
 			double ramReq=random.nextDouble()*5;
-			app[i]=new Component(idPrefix+i, cpuReq, ramReq);
+			app.addComponent(new Component(idPrefix+i, cpuReq, ramReq));
 		}
 		for(int i=0;i<appSize;i++) {
-			while(app[i].getConnectors().size()<compGrade) {
+			while(app.getComponent(i).getConnectors().size()<compGrade) {
 				int i0=random.nextInt(appSize);
 				if(i0!=i) {
 					double bwReq=random.nextDouble()*3;
 					double maxLatency=random.nextDouble()*90+10;
-					new Connector(bwReq, maxLatency, app[i], app[i0]);
+					new Connector(bwReq, maxLatency, app.getComponent(i), app.getComponent(i0));
 				}
 			}
 		}
-		Component c=app[random.nextInt(appSize)];
-		EndDevice d=new ArrayList<EndDevice>(region.getEndDevices()).get(random.nextInt(region.getEndDevices().size()));
+		Component c=app.getRandomComponent();
+		EndDevice d=region.getRandomEndDevice();
 		double bwReq=random.nextDouble()*2;
 		double maxLatency=random.nextDouble()*40+40;
 		new Connector(bwReq, maxLatency, c, d);
-		return new HashSet<Component>(Arrays.asList(app));
+		return app;
 	}
 
-	private static Map2d<Infrastructure,Integer,Set<Component>> createApps(Infrastructure[] regions) {
-		Map2d<Infrastructure,Integer,Set<Component>> apps=new Map2d<Infrastructure,Integer,Set<Component>>();
+	private static void createApps() {
 		for(int j=0;j<nrAppsPerRegion;j++) {
 			for(int i=0;i<nrRegions;i++) {
-				Set<Component> app=createApp(regions[i], "c"+i+"."+j+".");
-				apps.put(regions[i], j, app);
+				Application app=createApp(colonies[i], "c"+i+"."+j+".");
+				colonies[i].addApplication(app);
 			}
 		}
-		return apps;
 	}
 
-	private static void doModel2(Infrastructure[] regions, Map2d<Infrastructure,Integer,Set<Component>> apps) throws IOException {
-		Orchestrator[] orchestrators=new Orchestrator[nrRegions];
-		for(int i=0;i<nrRegions;i++)
-			orchestrators[i]=new Orchestrator(regions[i]);
-		FileWriter fileWriter=new FileWriter("results_model2.csv");
-		fileWriter.write("App;Success;TimeMs;Migrations\n");
-		for(int j=0;j<nrAppsPerRegion;j++) {
-			long totalSuccess=0;
-			long totalTimeMs=0;
-			long totalMigrations=0;
-			for(int i=0;i<nrRegions;i++) {
-				System.out.println("Model 2, Region "+i+", app "+j);
-				Set<Component> app=apps.get(regions[i],j);
-				Result result=orchestrators[i].addApplication(app);
-				totalSuccess+=result.success?1:0;
-				totalTimeMs+=result.timeMs;
-				totalMigrations+=result.migrations;
-			}
-			//fileWriter.write(""+j+";"+totalSuccess/nrRegions+";"+totalTimeMs/nrRegions+";"+totalMigrations/nrRegions+"\n");
-			//fileWriter.write(String.format("%d;%.2f;%.2f;%.2f\n",j,totalSuccess/nrRegions,totalTimeMs/nrRegions,totalMigrations/nrRegions));
-			fileWriter.write(String.format("%d;%d;%d;%d\n",j,totalSuccess,totalTimeMs,totalMigrations));
-			fileWriter.flush();
-		}
-		fileWriter.close();
-	}
-
-	private static void doModel1(Infrastructure[] regions, Map2d<Infrastructure,Integer,Set<Component>> apps) throws IOException {
-		Infrastructure infra=createInfraModel1(regions);
+	private static void doModel1() throws IOException {
 		Orchestrator orchestrator=new Orchestrator(infra);
 		FileWriter fileWriter=new FileWriter("results_model1.csv");
-		fileWriter.write("App;Success;TimeMs;Migrations\n");
+		fileWriter.write("App;NrRegions;Success;TimeMs;Migrations\n");
 		for(int j=0;j<nrAppsPerRegion;j++) {
 			long totalSuccess=0;
 			long totalTimeMs=0;
 			long totalMigrations=0;
 			for(int i=0;i<nrRegions;i++) {
 				System.out.println("Model 1, Region "+i+", app "+j);
-				Set<Component> app=apps.get(regions[i],j);
+				Application app=colonies[i].getApplication(j);
 				Result result=orchestrator.addApplication(app);
 				totalSuccess+=result.success?1:0;
 				totalTimeMs+=result.timeMs;
 				totalMigrations+=result.migrations;
 			}
-			fileWriter.write(String.format("%d;%d;%d;%d\n",j,totalSuccess,totalTimeMs,totalMigrations));
+			fileWriter.write(String.format("%d;%d;%d;%d;%d\n",j,nrRegions,totalSuccess,totalTimeMs,totalMigrations));
+			fileWriter.flush();
+		}
+		fileWriter.close();
+	}
+
+	private static void doModel2() throws IOException {
+		Orchestrator[] orchestrators=new Orchestrator[nrRegions];
+		for(int i=0;i<nrRegions;i++) {
+			Infrastructure subInfra=infra.getSubInfra(colonies[i], cloud);
+			orchestrators[i]=new Orchestrator(subInfra);
+		}
+		FileWriter fileWriter=new FileWriter("results_model2.csv");
+		fileWriter.write("App;NrRegions;Success;TimeMs;Migrations\n");
+		for(int j=0;j<nrAppsPerRegion;j++) {
+			long totalSuccess=0;
+			long totalTimeMs=0;
+			long totalMigrations=0;
+			for(int i=0;i<nrRegions;i++) {
+				System.out.println("Model 2, Region "+i+", app "+j);
+				Application app=colonies[i].getApplication(j);
+				Result result=orchestrators[i].addApplication(app);
+				totalSuccess+=result.success?1:0;
+				totalTimeMs+=result.timeMs;
+				totalMigrations+=result.migrations;
+			}
+			fileWriter.write(String.format("%d;%d;%d;%d;%d\n",j,nrRegions,totalSuccess,totalTimeMs,totalMigrations));
 			fileWriter.flush();
 		}
 		fileWriter.close();
@@ -211,25 +173,9 @@ public class Main {
 
 	public static void main(String[] args) throws IOException {
 		random=new Random();
-		Infrastructure[] regions=createInfraModel2();
-		Map2d<Infrastructure,Integer,Set<Component>> apps=createApps(regions);
-		doModel2(regions, apps);
-		doModel1(regions, apps);
-		/*
-		Set<Component> app=new HashSet<>();
-		Component c1=new Component("c1",1,1);
-		Component c2=new Component("c2",2,1);
-		app.add(c1);
-		app.add(c2);
-		new Connector(1, 10, c1, c2);
-		new Connector(1, 10, c1, (EndDevice)infra.getEndDevices().toArray()[0]);
-		orch.addApplication(app);
-		orch.print();
-		app=new HashSet<>();
-		app.add(new Component("c3",1,1));
-		app.add(new Component("c4",2,1));
-		orch.addApplication(app);
-		orch.print();
-		*/
+		createInfra();
+		createApps();
+		doModel1();
+		doModel2();
 	}
 }

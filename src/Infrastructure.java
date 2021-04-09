@@ -184,4 +184,47 @@ public class Infrastructure {
 		}
 		return links;
 	}
+
+	public Infrastructure getSubInfra(Set<Colony> colonies, Server cloud) {
+		Infrastructure subInfra=new Infrastructure();
+		for(Colony colony : colonies) {
+			for(Server s : colony.getFogNodes())
+				subInfra.addServer(s);
+			for(EndDevice d : colony.getEndDevices())
+				subInfra.addEndDevice(d);
+		}
+		subInfra.addServer(cloud);
+		for(IHwNode n1 : subInfra.nodes) {
+			for(IHwNode n2 : subInfra.nodes) {
+				subInfra.paths.put(n1, n2, paths.get(n1, n2));
+				subInfra.allPaths.addAll(paths.get(n1, n2));
+			}
+		}
+		for(IHwNode n : subInfra.nodes) {
+			for(Link l : n.getLinks()) {
+				if(subInfra.nodes.contains(l.getOtherNode(n))) {
+					subInfra.pathsOfLink.put(l, new HashSet<>());
+					for(Path p : pathsOfLink.get(l)) {
+						if(subInfra.containsPath(p))
+							subInfra.pathsOfLink.get(l).add(p);
+					}
+				}
+			}
+		}
+		return subInfra;
+	}
+
+	public Infrastructure getSubInfra(Colony colony, Server cloud) {
+		Set<Colony> colonies=new HashSet<>();
+		colonies.add(colony);
+		return getSubInfra(colonies, cloud);
+	}
+
+	public boolean containsPath(Path p) {
+		for(IHwNode n : p.getNodes()) {
+			if(!nodes.contains(n))
+				return false;
+		}
+		return true;
+	}
 }
