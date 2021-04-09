@@ -24,7 +24,7 @@ public class Orchestrator {
 
 	public Result addApplication(Application app) {
 		long startTime=System.currentTimeMillis();
-		long t=System.currentTimeMillis();
+		//long t=System.currentTimeMillis();
 		Result result=new Result();
 		//preparing collections
 		Set<Component> allComponents=new HashSet<>(components);
@@ -39,8 +39,8 @@ public class Orchestrator {
 		Set<IHwNode> allHwNodes=infra.getNodes();
 		Set<Path> allPaths=infra.getAllPaths();
 		Set<Link> allLinks=infra.getAllInternalLinks();
-		System.out.println("Preparations finished: "+(System.currentTimeMillis()-t));
-		t=System.currentTimeMillis();
+		//System.out.println("Preparations finished: "+(System.currentTimeMillis()-t));
+		//t=System.currentTimeMillis();
 		//creating variables
 		Map2d<ISwNode,IHwNode,GRBVar> x=new Map2d<>();
 		Map2d<Connector,Path,GRBVar> y=new Map2d<>();
@@ -66,8 +66,8 @@ public class Orchestrator {
 				GRBVar var=model.addVar(0,1,1,GRB.BINARY,"z_"+comp.getId());//part of obj. function with coeff. 1
 				z.put(comp, var);
 			}
-			System.out.println("Variables created: "+(System.currentTimeMillis()-t));
-			t=System.currentTimeMillis();
+			//System.out.println("Variables created: "+(System.currentTimeMillis()-t));
+			//t=System.currentTimeMillis();
 			//(9)-(10) each component on exactly one server and on no end device
 			for(Component comp : allComponents) {
 				GRBLinExpr expr = new GRBLinExpr();
@@ -83,8 +83,8 @@ public class Orchestrator {
 					model.addConstr(expr,GRB.EQUAL,0,"Surely0_"+comp.getId()+"_"+dev.getId());
 				}
 			}
-			System.out.println("(9)-(10): "+(System.currentTimeMillis()-t));
-			t=System.currentTimeMillis();
+			//System.out.println("(9)-(10): "+(System.currentTimeMillis()-t));
+			//t=System.currentTimeMillis();
 			//(11) each connector on exactly one path
 			for(Connector conn : allConnectors) {
 				GRBLinExpr expr=new GRBLinExpr();
@@ -94,8 +94,8 @@ public class Orchestrator {
 				}
 				model.addConstr(expr,GRB.EQUAL,1,"Exactly1_"+conn.getId());
 			}
-			System.out.println("(11): "+(System.currentTimeMillis()-t));
-			t=System.currentTimeMillis();
+			//System.out.println("(11): "+(System.currentTimeMillis()-t));
+			//t=System.currentTimeMillis();
 			//(12)-(13) each end device on itself
 			for(EndDevice dev : infra.getEndDevices()) {
 				for(IHwNode hn : allHwNodes) {
@@ -108,8 +108,8 @@ public class Orchestrator {
 						model.addConstr(expr,GRB.EQUAL,1,"Surely1_"+dev.getId());
 				}
 			}
-			System.out.println("(12)-(13): "+(System.currentTimeMillis()-t));
-			t=System.currentTimeMillis();
+			//System.out.println("(12)-(13): "+(System.currentTimeMillis()-t));
+			//t=System.currentTimeMillis();
 			//(14) consistency of x and y
 			for(Connector conn : allConnectors) {
 				for(IHwNode n1 : allHwNodes) {
@@ -132,8 +132,8 @@ public class Orchestrator {
 					}
 				}
 			}
-			System.out.println("(14): "+(System.currentTimeMillis()-t));
-			t=System.currentTimeMillis();
+			//System.out.println("(14): "+(System.currentTimeMillis()-t));
+			//t=System.currentTimeMillis();
 			//(15)-(16) node capacity constraints
 			for(Server s : infra.getServers()) {
 				GRBLinExpr expr1 = new GRBLinExpr();
@@ -146,8 +146,8 @@ public class Orchestrator {
 				model.addConstr(expr1,GRB.LESS_EQUAL,s.getCpuCap(),"NodeCpu_"+s.getId());
 				model.addConstr(expr2,GRB.LESS_EQUAL,s.getRamCap(),"NodeRam_"+s.getId());
 			}
-			System.out.println("(15)-(16): "+(System.currentTimeMillis()-t));
-			t=System.currentTimeMillis();
+			//System.out.println("(15)-(16): "+(System.currentTimeMillis()-t));
+			//t=System.currentTimeMillis();
 			//(17) bandwidth constraints
 			for(Link l : allLinks) {
 				//System.out.println("l: "+l.getId());
@@ -164,8 +164,8 @@ public class Orchestrator {
 				}
 				model.addConstr(expr,GRB.LESS_EQUAL,l.getBw(),"Bw_"+l.getId());
 			}
-			System.out.println("(17): "+(System.currentTimeMillis()-t));
-			t=System.currentTimeMillis();
+			//System.out.println("(17): "+(System.currentTimeMillis()-t));
+			//t=System.currentTimeMillis();
 			//(18) latency constraints
 			for(Connector conn : allConnectors) {
 				GRBLinExpr expr = new GRBLinExpr();
@@ -175,8 +175,8 @@ public class Orchestrator {
 				}
 				model.addConstr(expr,GRB.LESS_EQUAL,conn.getMaxLatency(),"Latency_"+conn.getId());
 			}
-			System.out.println("(18): "+(System.currentTimeMillis()-t));
-			t=System.currentTimeMillis();
+			//System.out.println("(18): "+(System.currentTimeMillis()-t));
+			//t=System.currentTimeMillis();
 			//(19) setting migration variables
 			for(Component c : components) {
 				GRBVar zVar=z.get(c);
@@ -186,19 +186,19 @@ public class Orchestrator {
 				expr.addTerm(1, xVar);
 				model.addConstr(expr,GRB.EQUAL,1,"Migr_"+c);
 			}
-			System.out.println("(19): "+(System.currentTimeMillis()-t));
-			t=System.currentTimeMillis();
+			//System.out.println("(19): "+(System.currentTimeMillis()-t));
+			//t=System.currentTimeMillis();
 			//perform optimization
 			//model.write("model.lp");
 			model.getEnv().set(GRB.DoubleParam.TimeLimit,60);
 			model.getEnv().set(GRB.IntParam.LogToConsole,0);
-			System.out.println("Running model.optimize()");
+			//System.out.println("Running model.optimize()");
 			model.optimize();
-			System.out.println("Optimize finished: "+(System.currentTimeMillis()-t));
-			t=System.currentTimeMillis();
+			//System.out.println("Optimize finished: "+(System.currentTimeMillis()-t));
+			//t=System.currentTimeMillis();
 			if(model.get(IntAttr.SolCount)>0) {
 				//model.write("solution.sol");
-				result.success=true;
+				result.success=1;
 				result.migrations=Math.round(model.get(GRB.DoubleAttr.ObjVal));
 				//retrieve solution
 				for(Component comp : allComponents) {
@@ -212,14 +212,14 @@ public class Orchestrator {
 					}
 				}
 			} else {
-				result.success=false;
+				result.success=0;
 				result.migrations=0;
 			}
 			model.dispose();
 			env.dispose();
 		} catch (GRBException e) {
 			e.printStackTrace();
-			result.success=false;
+			result.success=0;
 			result.migrations=0;
 		}
 		result.timeMs=System.currentTimeMillis()-startTime;

@@ -3,9 +3,9 @@ import java.io.IOException;
 import java.util.Random;
 
 public class Main {
-	private static int nrFogNodesPerRegion=5;///
+	private static int nrFogNodesPerRegion=6;///
 	private static int nrEndDevicesPerRegion=5;///
-	private static int nrAppsPerRegion=3;///
+	private static int nrAppsPerRegion=4;///
 	private static int nrRegions=5;///
 	private static int appSize=3;///
 	private static int compGrade=1;
@@ -123,59 +123,44 @@ public class Main {
 		}
 	}
 
-	private static void doModel1() throws IOException {
-		Orchestrator orchestrator=new Orchestrator(infra);
-		FileWriter fileWriter=new FileWriter("results_model1.csv");
-		fileWriter.write("App;NrRegions;Success;TimeMs;Migrations\n");
-		for(int j=0;j<nrAppsPerRegion;j++) {
-			long totalSuccess=0;
-			long totalTimeMs=0;
-			long totalMigrations=0;
-			for(int i=0;i<nrRegions;i++) {
-				System.out.println("Model 1, Region "+i+", app "+j);
-				Application app=colonies[i].getApplication(j);
-				Result result=orchestrator.addApplication(app);
-				totalSuccess+=result.success?1:0;
-				totalTimeMs+=result.timeMs;
-				totalMigrations+=result.migrations;
-			}
-			fileWriter.write(String.format("%d;%d;%d;%d;%d\n",j,nrRegions,totalSuccess,totalTimeMs,totalMigrations));
-			fileWriter.flush();
-		}
-		fileWriter.close();
-	}
-
-	private static void doModel2() throws IOException {
-		Orchestrator[] orchestrators=new Orchestrator[nrRegions];
+	private static void doExperiment() throws IOException {
+		int nrModels=2;
+		Orchestrator orchestrators[][]=new Orchestrator[nrModels][nrRegions];
 		for(int i=0;i<nrRegions;i++) {
+			orchestrators[0][i]=new Orchestrator(infra);
 			Infrastructure subInfra=infra.getSubInfra(colonies[i], cloud);
-			orchestrators[i]=new Orchestrator(subInfra);
+			orchestrators[1][i]=new Orchestrator(subInfra);
 		}
-		FileWriter fileWriter=new FileWriter("results_model2.csv");
-		fileWriter.write("App;NrRegions;Success;TimeMs;Migrations\n");
+		FileWriter fileWriters[]=new FileWriter[nrModels];
+		for(int k=0;k<nrModels;k++) {
+			fileWriters[k]=new FileWriter("results_model"+(k+1)+".csv");
+			fileWriters[k].write("App;NrRegions;Success;TimeMs;Migrations\n");
+		}
 		for(int j=0;j<nrAppsPerRegion;j++) {
-			long totalSuccess=0;
-			long totalTimeMs=0;
-			long totalMigrations=0;
+			Result totalResults[]=new Result[nrModels];
+			for(int k=0;k<nrModels;k++)
+				totalResults[k]=new Result();
 			for(int i=0;i<nrRegions;i++) {
-				System.out.println("Model 2, Region "+i+", app "+j);
 				Application app=colonies[i].getApplication(j);
-				Result result=orchestrators[i].addApplication(app);
-				totalSuccess+=result.success?1:0;
-				totalTimeMs+=result.timeMs;
-				totalMigrations+=result.migrations;
+				for(int k=0;k<nrModels;k++) {
+					System.out.println("app "+j+", region "+i+", model "+(k+1));
+					Result result=orchestrators[k][i].addApplication(app);
+					totalResults[k].increaseBy(result);
+				}
 			}
-			fileWriter.write(String.format("%d;%d;%d;%d;%d\n",j,nrRegions,totalSuccess,totalTimeMs,totalMigrations));
-			fileWriter.flush();
+			for(int k=0;k<nrModels;k++) {
+				fileWriters[k].write(String.format("%d;%d;%s\n",j,nrRegions,totalResults[k].toString()));
+				fileWriters[k].flush();
+			}
 		}
-		fileWriter.close();
+		for(int k=0;k<nrModels;k++)
+			fileWriters[k].close();
 	}
 
 	public static void main(String[] args) throws IOException {
 		random=new Random();
 		createInfra();
 		createApps();
-		doModel1();
-		doModel2();
+		doExperiment();
 	}
 }
