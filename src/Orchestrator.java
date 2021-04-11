@@ -45,9 +45,12 @@ public class Orchestrator {
 		Result result=new Result();
 		//preparing collections
 		Set<Component> allComponents=new HashSet<>(components);
+		Set<Component> ourComponents=new HashSet<>(components);
 		Map<Component,Server> foreignCompMapping=new HashMap<>();
-		for(int i=0;i<app.getSize();i++)
+		for(int i=0;i<app.getSize();i++) {
 			allComponents.add(app.getComponent(i));
+			ourComponents.add(app.getComponent(i));
+		}
 		for(Orchestrator neighbor : neighbors) {
 			for(Component comp : neighbor.getCompMapping().keySet()) {
 				allComponents.add(comp);
@@ -55,10 +58,9 @@ public class Orchestrator {
 			}
 		}
 		Set<Connector> allConnectors=new HashSet<>();
-		for(Component comp : allComponents) {
+		for(Component comp : ourComponents) {
 			for(Connector conn : comp.getConnectors()) {
-				if(allComponents.contains(conn.getOtherVertex(comp)))
-					allConnectors.add(conn);
+				allConnectors.add(conn);
 			}
 		}
 		Set<ISwNode> allSwNodes=new HashSet<>(allComponents);
@@ -182,8 +184,8 @@ public class Orchestrator {
 			for(Link l : allLinks) {
 				//System.out.println("l: "+l.getId());
 				GRBLinExpr expr = new GRBLinExpr();
-				if(infra.getPathsOfLink(l)==null)
-					System.out.println("NULL: "+l.getId());
+				//if(infra.getPathsOfLink(l)==null)
+				//	System.out.println("NULL: "+l.getId());
 				for(Path p : infra.getPathsOfLink(l)) {
 					//System.out.println("p: "+p);
 					for(Connector conn : allConnectors) {
@@ -240,29 +242,35 @@ public class Orchestrator {
 				result.migrations=0;
 				for(Component comp : components) {
 					GRBVar var=z.get(comp);
-					if(var.get(GRB.DoubleAttr.X)>0.5)
+					if(var.get(GRB.DoubleAttr.X)>0.5) {
 						result.migrations++;
+						System.out.println("Migration of component "+comp.getId());
+					}
 				}
 				//retrieve solution
-				for(Component comp : allComponents) {
+				for(Component comp : ourComponents) {
 					for(Server s : infra.getServers()) {
 						GRBVar var=x.get(comp,s);
 						if(var.get(GRB.DoubleAttr.X)>0.5) {
 							if(colony==null) {
 								compMapping.put(comp,s);
 								components.add(comp);
+								System.out.println("Allocating component "+comp.getId()+" to own server "+s.getId());
 							} else {
 								if(colony.getFogNodes().contains(s)) {
 									compMapping.put(comp,s);
 									components.add(comp);
-								} else if(!foreignCompMapping.containsKey(comp)) {
+									System.out.println("Allocating component "+comp.getId()+" to own server "+s.getId());
+								} else {
 									for(Orchestrator orch : neighbors) {
 										if(orch.colony!=null && orch.colony.getFogNodes().contains(s)) {
 											orch.compMapping.put(comp, s);
 											orch.components.add(comp);
+											System.out.println("Allocating component "+comp.getId()+" to neighbor's server "+s.getId());
 										}
 										compMapping.remove(comp);
 										components.remove(comp);
+										System.out.println("Removing component "+comp.getId()+" from own infrastructure; s="+s.getId());
 									}
 								}
 							}
@@ -283,6 +291,7 @@ public class Orchestrator {
 		}
 		result.timeMs=System.currentTimeMillis()-startTime;
 		System.out.println("Success: "+result.success);
+		System.out.println("TimeMs: "+result.timeMs);
 		return result;
 	}
 

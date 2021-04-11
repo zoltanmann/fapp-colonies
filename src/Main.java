@@ -3,18 +3,19 @@ import java.io.IOException;
 import java.util.Random;
 
 public class Main {
-	private static int nrFogNodesPerRegion=10;///
+	private static int nrFogNodesPerRegion=7;///
 	private static int nrEndDevicesPerRegion=5;///
-	private static int nrAppsPerRegion=6;///
+	private static int nrAppsPerRegion=4;///
 	private static int nrRegions=7;///
 	private static int appSize=4;///
-	private static int compGrade=1;
+	//private static int compGrade=2;
 	private static int nrAdditionalLinks=10;///
-	private static int nrNeighborsOfEndDevice=3;
+	private static int nrNeighborsOfEndDevice=2;
 	public static Random random;
 	private static Server cloud;
 	private static Infrastructure infra;
 	private static Colony colonies[];
+	private static boolean skipModel1=false;
 
 	private static void createInfra() {
 		infra=new Infrastructure();
@@ -72,8 +73,9 @@ public class Main {
 		}
 		Server s=colonies[index].getRandomFogNode();
 		double bw=random.nextDouble()*4+1;
-		double latency=random.nextDouble()*50+50;
+		double latency=random.nextDouble()*40+40;///
 		new Link(bw,latency,s,cloud);
+		colonies[index].addFogNode(cloud);
 	}
 
 	private static void connectRegions(Colony region1, Colony region2) {
@@ -83,7 +85,7 @@ public class Main {
 		do {
 			s1=region1.getRandomFogNode();
 			s2=region2.getRandomFogNode();
-		} while(s1==s2);
+		} while(s1==s2 || s1==cloud || s2==cloud);
 		double bw=random.nextDouble()*4+1;
 		double latency=random.nextDouble()*4+1;
 		new Link(bw,latency,s1,s2);
@@ -94,22 +96,30 @@ public class Main {
 		for(int i=0;i<appSize;i++) {
 			double cpuReq=random.nextDouble()*5;
 			double ramReq=random.nextDouble()*5;
-			app.addComponent(new Component(idPrefix+i, cpuReq, ramReq));
+			Component comp=new Component(idPrefix+i, cpuReq, ramReq);
+			if(i>0) {
+				double bwReq=random.nextDouble()*3;
+				double maxLatency=random.nextDouble()*20+20;///
+				new Connector(bwReq, maxLatency, comp, app.getRandomComponent());
+			}
+			app.addComponent(comp);
 		}
+		/* ///
 		for(int i=0;i<appSize;i++) {
 			while(app.getComponent(i).getConnectors().size()<compGrade) {
 				int i0=random.nextInt(appSize);
 				if(i0!=i) {
 					double bwReq=random.nextDouble()*3;
-					double maxLatency=random.nextDouble()*90+10;
+					double maxLatency=random.nextDouble()*20+20;///
 					new Connector(bwReq, maxLatency, app.getComponent(i), app.getComponent(i0));
 				}
 			}
 		}
+		*/
 		Component c=app.getRandomComponent();
 		EndDevice d=region.getRandomEndDevice();
 		double bwReq=random.nextDouble()*2;
-		double maxLatency=random.nextDouble()*40+40;
+		double maxLatency=random.nextDouble()*20+20;///
 		new Connector(bwReq, maxLatency, c, d);
 		return app;
 	}
@@ -126,8 +136,9 @@ public class Main {
 	private static void doExperiment() throws IOException {
 		int nrModels=3;
 		Orchestrator orchestrators[][]=new Orchestrator[nrModels][nrRegions];
+		Orchestrator model1Orchestrator=new Orchestrator(infra);
 		for(int i=0;i<nrRegions;i++) {
-			orchestrators[0][i]=new Orchestrator(infra);
+			orchestrators[0][i]=model1Orchestrator;
 			Infrastructure subInfra=infra.getSubInfra(colonies[i], cloud, false);
 			orchestrators[1][i]=new Orchestrator(subInfra);
 			subInfra=infra.getSubInfra(colonies[i], cloud, true);
@@ -158,6 +169,8 @@ public class Main {
 				Application app=colonies[i].getApplication(j);
 				for(int k=0;k<nrModels;k++) {
 					System.out.println("app "+j+", region "+i+", model "+(k+1));
+					if(skipModel1 && k==0)
+						continue;
 					Result result=orchestrators[k][i].addApplication(app);
 					totalResults[k].increaseBy(result);
 				}
