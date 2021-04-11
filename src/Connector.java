@@ -43,6 +43,14 @@ public class Connector {
 		return v2;
 	}
 
+	public ISwNode getOtherVertex(ISwNode v) {
+		if(v==v1)
+			return v2;
+		if(v==v2)
+			return v1;
+		return null;
+	}
+
 	public String getId() {
 		return id;
 	}

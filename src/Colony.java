@@ -55,4 +55,12 @@ public class Colony {
 	public List<EndDevice> getEndDevices() {
 		return endDevices;
 	}
+
+	public Set<Colony> getNeighbors() {
+		return neighbors;
+	}
+
+	public boolean isAdjacentTo(Colony other) {
+		return neighbors.contains(other);
+	}
 }

@@ -3,11 +3,11 @@ import java.io.IOException;
 import java.util.Random;
 
 public class Main {
-	private static int nrFogNodesPerRegion=6;///
+	private static int nrFogNodesPerRegion=10;///
 	private static int nrEndDevicesPerRegion=5;///
-	private static int nrAppsPerRegion=4;///
-	private static int nrRegions=5;///
-	private static int appSize=3;///
+	private static int nrAppsPerRegion=6;///
+	private static int nrRegions=7;///
+	private static int appSize=4;///
 	private static int compGrade=1;
 	private static int nrAdditionalLinks=10;///
 	private static int nrNeighborsOfEndDevice=3;
@@ -124,18 +124,32 @@ public class Main {
 	}
 
 	private static void doExperiment() throws IOException {
-		int nrModels=2;
+		int nrModels=3;
 		Orchestrator orchestrators[][]=new Orchestrator[nrModels][nrRegions];
 		for(int i=0;i<nrRegions;i++) {
 			orchestrators[0][i]=new Orchestrator(infra);
-			Infrastructure subInfra=infra.getSubInfra(colonies[i], cloud);
+			Infrastructure subInfra=infra.getSubInfra(colonies[i], cloud, false);
 			orchestrators[1][i]=new Orchestrator(subInfra);
+			subInfra=infra.getSubInfra(colonies[i], cloud, true);
+			orchestrators[2][i]=new Orchestrator(subInfra);
+			orchestrators[2][i].setColony(colonies[i]);
+		}
+		for(int i=0;i<nrRegions;i++) {
+			for(int j=i+1;j<nrRegions;j++) {
+				if(colonies[i].isAdjacentTo(colonies[j])) {
+					orchestrators[2][i].addNeighbor(orchestrators[2][j]);
+					orchestrators[2][j].addNeighbor(orchestrators[2][i]);
+				}
+			}
 		}
 		FileWriter fileWriters[]=new FileWriter[nrModels];
 		for(int k=0;k<nrModels;k++) {
 			fileWriters[k]=new FileWriter("results_model"+(k+1)+".csv");
 			fileWriters[k].write("App;NrRegions;Success;TimeMs;Migrations\n");
 		}
+		Result grandTotalResults[]=new Result[nrModels];
+		for(int k=0;k<nrModels;k++)
+			grandTotalResults[k]=new Result();
 		for(int j=0;j<nrAppsPerRegion;j++) {
 			Result totalResults[]=new Result[nrModels];
 			for(int k=0;k<nrModels;k++)
@@ -151,10 +165,16 @@ public class Main {
 			for(int k=0;k<nrModels;k++) {
 				fileWriters[k].write(String.format("%d;%d;%s\n",j,nrRegions,totalResults[k].toString()));
 				fileWriters[k].flush();
+				grandTotalResults[k].increaseBy(totalResults[k]);
 			}
 		}
 		for(int k=0;k<nrModels;k++)
 			fileWriters[k].close();
+		FileWriter fileWriter=new FileWriter("results_total.csv");
+		fileWriter.write("Model;Success;TimeMs;Migrations\n");
+		for(int k=0;k<nrModels;k++)
+			fileWriter.write(""+(k+1)+";"+grandTotalResults[k].toString()+"\n");
+		fileWriter.close();
 	}
 
 	public static void main(String[] args) throws IOException {

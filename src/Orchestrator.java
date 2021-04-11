@@ -15,11 +15,28 @@ public class Orchestrator {
 	private Infrastructure infra;
 	private Set<Component> components;
 	private Map<Component,Server> compMapping;
+	private Set<Orchestrator> neighbors;
+	private static final double mu=1;
+	private Colony colony;
 
 	public Orchestrator(Infrastructure infra) {
 		this.infra=infra;
 		components=new HashSet<>();
 		compMapping=new HashMap<>();
+		neighbors=new HashSet<>();
+		colony=null;
+	}
+
+	public void addNeighbor(Orchestrator neighbor) {
+		neighbors.add(neighbor);
+	}
+
+	public void setColony(Colony colony) {
+		this.colony=colony;
+	}
+
+	public Map<Component,Server> getCompMapping() {
+		return compMapping;
 	}
 
 	public Result addApplication(Application app) {
@@ -28,11 +45,21 @@ public class Orchestrator {
 		Result result=new Result();
 		//preparing collections
 		Set<Component> allComponents=new HashSet<>(components);
+		Map<Component,Server> foreignCompMapping=new HashMap<>();
 		for(int i=0;i<app.getSize();i++)
 			allComponents.add(app.getComponent(i));
+		for(Orchestrator neighbor : neighbors) {
+			for(Component comp : neighbor.getCompMapping().keySet()) {
+				allComponents.add(comp);
+				foreignCompMapping.put(comp, neighbor.getCompMapping().get(comp));
+			}
+		}
 		Set<Connector> allConnectors=new HashSet<>();
 		for(Component comp : allComponents) {
-			allConnectors.addAll(comp.getConnectors());
+			for(Connector conn : comp.getConnectors()) {
+				if(allComponents.contains(conn.getOtherVertex(comp)))
+					allConnectors.add(conn);
+			}
 		}
 		Set<ISwNode> allSwNodes=new HashSet<>(allComponents);
 		allSwNodes.addAll(infra.getEndDevices());
@@ -50,7 +77,10 @@ public class Orchestrator {
 			GRBModel model=new GRBModel(env);
 			for(ISwNode sn : allSwNodes) {
 				for(IHwNode hn : allHwNodes) {
-					GRBVar var=model.addVar(0,1,0,GRB.BINARY,"x_"+sn.getId()+"_"+hn.getId());
+					double objWeight=0;
+					if(colony!=null && !colony.getFogNodes().contains(hn))
+						objWeight=mu;
+					GRBVar var=model.addVar(0,1,objWeight,GRB.BINARY,"x_"+sn.getId()+"_"+hn.getId());
 					x.put(sn,hn,var);
 				}
 			}
@@ -186,6 +216,14 @@ public class Orchestrator {
 				expr.addTerm(1, xVar);
 				model.addConstr(expr,GRB.EQUAL,1,"Migr_"+c);
 			}
+			//foreign components must not be migrated
+			for(Component c : foreignCompMapping.keySet()) {
+				Server s=foreignCompMapping.get(c);
+				GRBVar xVar=x.get(c, s);
+				GRBLinExpr expr = new GRBLinExpr();
+				expr.addTerm(1, xVar);
+				model.addConstr(expr,GRB.EQUAL,1,"NoMigr_"+c);
+			}
 			//System.out.println("(19): "+(System.currentTimeMillis()-t));
 			//t=System.currentTimeMillis();
 			//perform optimization
@@ -199,14 +237,35 @@ public class Orchestrator {
 			if(model.get(IntAttr.SolCount)>0) {
 				//model.write("solution.sol");
 				result.success=1;
-				result.migrations=Math.round(model.get(GRB.DoubleAttr.ObjVal));
+				result.migrations=0;
+				for(Component comp : components) {
+					GRBVar var=z.get(comp);
+					if(var.get(GRB.DoubleAttr.X)>0.5)
+						result.migrations++;
+				}
 				//retrieve solution
 				for(Component comp : allComponents) {
 					for(Server s : infra.getServers()) {
 						GRBVar var=x.get(comp,s);
 						if(var.get(GRB.DoubleAttr.X)>0.5) {
-							compMapping.put(comp,s);
-							components.add(comp);
+							if(colony==null) {
+								compMapping.put(comp,s);
+								components.add(comp);
+							} else {
+								if(colony.getFogNodes().contains(s)) {
+									compMapping.put(comp,s);
+									components.add(comp);
+								} else if(!foreignCompMapping.containsKey(comp)) {
+									for(Orchestrator orch : neighbors) {
+										if(orch.colony!=null && orch.colony.getFogNodes().contains(s)) {
+											orch.compMapping.put(comp, s);
+											orch.components.add(comp);
+										}
+										compMapping.remove(comp);
+										components.remove(comp);
+									}
+								}
+							}
 							break;
 						}
 					}

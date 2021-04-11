@@ -214,9 +214,13 @@ public class Infrastructure {
 		return subInfra;
 	}
 
-	public Infrastructure getSubInfra(Colony colony, Server cloud) {
+	public Infrastructure getSubInfra(Colony colony, Server cloud, boolean withNeighborColonies) {
 		Set<Colony> colonies=new HashSet<>();
 		colonies.add(colony);
+		if(withNeighborColonies) {
+			for(Colony c2 : colony.getNeighbors())
+				colonies.add(c2);
+		}
 		return getSubInfra(colonies, cloud);
 	}
 
