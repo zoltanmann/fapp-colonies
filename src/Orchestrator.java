@@ -17,14 +17,17 @@ public class Orchestrator {
 	private Map<Component,Server> compMapping;
 	private Set<Orchestrator> neighbors;
 	private static final double mu=1;
+	private static final double nu=1;
 	private Colony colony;
+	private int coordModel;
 
-	public Orchestrator(Infrastructure infra) {
+	public Orchestrator(Infrastructure infra, int coordModel) {
 		this.infra=infra;
 		components=new HashSet<>();
 		compMapping=new HashMap<>();
 		neighbors=new HashSet<>();
 		colony=null;
+		this.coordModel=coordModel;
 	}
 
 	public void addNeighbor(Orchestrator neighbor) {
@@ -53,8 +56,11 @@ public class Orchestrator {
 		}
 		for(Orchestrator neighbor : neighbors) {
 			for(Component comp : neighbor.getCompMapping().keySet()) {
-				allComponents.add(comp);
-				foreignCompMapping.put(comp, neighbor.getCompMapping().get(comp));
+				Server s=neighbor.getCompMapping().get(comp);
+				if(coordModel==3 || (coordModel==4 && colony.getFogNodes().contains(s))) {
+					allComponents.add(comp);
+					foreignCompMapping.put(comp, s);
+				}
 			}
 		}
 		Set<Connector> allConnectors=new HashSet<>();
@@ -80,8 +86,10 @@ public class Orchestrator {
 			for(ISwNode sn : allSwNodes) {
 				for(IHwNode hn : allHwNodes) {
 					double objWeight=0;
-					if(colony!=null && !colony.getFogNodes().contains(hn))
+					if(coordModel==3 && !colony.getFogNodes().contains(hn))
 						objWeight=mu;
+					if(coordModel==4 && colony.isShared(hn))
+						objWeight=nu;
 					GRBVar var=model.addVar(0,1,objWeight,GRB.BINARY,"x_"+sn.getId()+"_"+hn.getId());
 					x.put(sn,hn,var);
 				}
@@ -252,7 +260,7 @@ public class Orchestrator {
 					for(Server s : infra.getServers()) {
 						GRBVar var=x.get(comp,s);
 						if(var.get(GRB.DoubleAttr.X)>0.5) {
-							if(colony==null) {
+							if(coordModel==1 || coordModel==2) {
 								compMapping.put(comp,s);
 								components.add(comp);
 								System.out.println("Allocating component "+comp.getId()+" to own server "+s.getId());
@@ -263,7 +271,7 @@ public class Orchestrator {
 									System.out.println("Allocating component "+comp.getId()+" to own server "+s.getId());
 								} else {
 									for(Orchestrator orch : neighbors) {
-										if(orch.colony!=null && orch.colony.getFogNodes().contains(s)) {
+										if(orch.colony.getFogNodes().contains(s)) {
 											orch.compMapping.put(comp, s);
 											orch.components.add(comp);
 											System.out.println("Allocating component "+comp.getId()+" to neighbor's server "+s.getId());

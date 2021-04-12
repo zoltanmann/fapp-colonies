@@ -1,6 +1,7 @@
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Random;
+import java.util.Set;
 
 public class Main {
 	private static int nrFogNodesPerRegion=7;///
@@ -11,6 +12,7 @@ public class Main {
 	//private static int compGrade=2;
 	private static int nrAdditionalLinks=10;///
 	private static int nrNeighborsOfEndDevice=2;
+	private static int nrNodesToShareWithNeighbor=2;
 	public static Random random;
 	private static Server cloud;
 	private static Infrastructure infra;
@@ -99,7 +101,7 @@ public class Main {
 			Component comp=new Component(idPrefix+i, cpuReq, ramReq);
 			if(i>0) {
 				double bwReq=random.nextDouble()*3;
-				double maxLatency=random.nextDouble()*20+20;///
+				double maxLatency=random.nextDouble()*30+30;///
 				new Connector(bwReq, maxLatency, comp, app.getRandomComponent());
 			}
 			app.addComponent(comp);
@@ -134,15 +136,15 @@ public class Main {
 	}
 
 	private static void doExperiment() throws IOException {
-		int nrModels=3;
+		int nrModels=4;
 		Orchestrator orchestrators[][]=new Orchestrator[nrModels][nrRegions];
-		Orchestrator model1Orchestrator=new Orchestrator(infra);
+		Orchestrator model1Orchestrator=new Orchestrator(infra,1);
 		for(int i=0;i<nrRegions;i++) {
 			orchestrators[0][i]=model1Orchestrator;
 			Infrastructure subInfra=infra.getSubInfra(colonies[i], cloud, false);
-			orchestrators[1][i]=new Orchestrator(subInfra);
+			orchestrators[1][i]=new Orchestrator(subInfra,2);
 			subInfra=infra.getSubInfra(colonies[i], cloud, true);
-			orchestrators[2][i]=new Orchestrator(subInfra);
+			orchestrators[2][i]=new Orchestrator(subInfra,3);
 			orchestrators[2][i].setColony(colonies[i]);
 		}
 		for(int i=0;i<nrRegions;i++) {
@@ -150,6 +152,34 @@ public class Main {
 				if(colonies[i].isAdjacentTo(colonies[j])) {
 					orchestrators[2][i].addNeighbor(orchestrators[2][j]);
 					orchestrators[2][j].addNeighbor(orchestrators[2][i]);
+				}
+			}
+		}
+		Colony[] bigColonies=new Colony[nrRegions];
+		for(int i=0;i<nrRegions;i++) {
+			bigColonies[i]=colonies[i].clone();
+			bigColonies[i].removeNeighbors();
+		}
+		for(int i=0;i<nrRegions;i++) {
+			for(int j=0;j<nrRegions;j++) {
+				if(colonies[i].isAdjacentTo(colonies[j])) {
+					bigColonies[i].addNeighbor(bigColonies[j]);
+					Set<Server> shared=bigColonies[i].shareNodes(nrNodesToShareWithNeighbor);
+					for(Server s : shared)
+						bigColonies[j].addFogNode(s);
+				}
+			}
+		}
+		for(int i=0;i<nrRegions;i++) {
+			Infrastructure subInfra=infra.getSubInfra(bigColonies[i], cloud, false);
+			orchestrators[3][i]=new Orchestrator(subInfra,4);
+			orchestrators[3][i].setColony(bigColonies[i]);
+		}
+		for(int i=0;i<nrRegions;i++) {
+			for(int j=i+1;j<nrRegions;j++) {
+				if(bigColonies[i].isAdjacentTo(bigColonies[j])) {
+					orchestrators[3][i].addNeighbor(orchestrators[3][j]);
+					orchestrators[3][j].addNeighbor(orchestrators[3][i]);
 				}
 			}
 		}
