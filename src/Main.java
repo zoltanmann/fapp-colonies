@@ -4,15 +4,15 @@ import java.util.Random;
 import java.util.Set;
 
 public class Main {
-	private static int nrFogNodesPerRegion=7;///
-	private static int nrEndDevicesPerRegion=5;///
-	private static int nrAppsPerRegion=4;///
-	private static int nrRegions=7;///
-	private static int appSize=4;///
+	private static int nrFogNodesPerRegion=10;///
+	private static int nrRegions=5;///
+	private static int nrAppsPerRegion=5;///
+	private static int appSize=5;///
 	//private static int compGrade=2;
-	private static int nrAdditionalLinks=10;///
+	private static int nrEndDevicesPerRegion=nrFogNodesPerRegion;///
+	private static int nrAdditionalLinks=nrFogNodesPerRegion*2;///
 	private static int nrNeighborsOfEndDevice=2;
-	private static int nrNodesToShareWithNeighbor=2;
+	private static int nrNodesToShareWithNeighbor=nrFogNodesPerRegion/10;
 	public static Random random;
 	private static Server cloud;
 	private static Infrastructure infra;
@@ -183,11 +183,12 @@ public class Main {
 				}
 			}
 		}
-		FileWriter fileWriters[]=new FileWriter[nrModels];
+		FileWriter fileWriter=new FileWriter("results_detail.csv");
+		fileWriter.write("App;NrRegions");
 		for(int k=0;k<nrModels;k++) {
-			fileWriters[k]=new FileWriter("results_model"+(k+1)+".csv");
-			fileWriters[k].write("App;NrRegions;Success;TimeMs;Migrations\n");
+			fileWriter.write(";Success-model"+(k+1)+";TimeMs-model"+(k+1)+";Migrations-model"+(k+1));
 		}
+		fileWriter.write("\n");
 		Result grandTotalResults[]=new Result[nrModels];
 		for(int k=0;k<nrModels;k++)
 			grandTotalResults[k]=new Result();
@@ -205,15 +206,17 @@ public class Main {
 					totalResults[k].increaseBy(result);
 				}
 			}
+			fileWriter.write(String.format("%d;%d",j,nrRegions));
 			for(int k=0;k<nrModels;k++) {
-				fileWriters[k].write(String.format("%d;%d;%s\n",j,nrRegions,totalResults[k].toString()));
-				fileWriters[k].flush();
+				fileWriter.write(";"+totalResults[k].toString());
+				fileWriter.flush();
 				grandTotalResults[k].increaseBy(totalResults[k]);
 			}
+			fileWriter.write("\n");
+			fileWriter.flush();
 		}
-		for(int k=0;k<nrModels;k++)
-			fileWriters[k].close();
-		FileWriter fileWriter=new FileWriter("results_total.csv");
+		fileWriter.close();
+		fileWriter=new FileWriter("results_total.csv");
 		fileWriter.write("Model;Success;TimeMs;Migrations\n");
 		for(int k=0;k<nrModels;k++)
 			fileWriter.write(""+(k+1)+";"+grandTotalResults[k].toString()+"\n");

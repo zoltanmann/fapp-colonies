@@ -16,8 +16,8 @@ public class Orchestrator {
 	private Set<Component> components;
 	private Map<Component,Server> compMapping;
 	private Set<Orchestrator> neighbors;
-	private static final double mu=1;
-	private static final double nu=1;
+	private static final double mu=10;
+	private static final double nu=10;
 	private Colony colony;
 	private int coordModel;
 
