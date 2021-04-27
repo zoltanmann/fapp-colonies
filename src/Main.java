@@ -4,15 +4,15 @@ import java.util.Random;
 import java.util.Set;
 
 public class Main {
-	private static int nrFogNodesPerRegion=10;///
-	private static int nrRegions=5;///
-	private static int nrAppsPerRegion=5;///
-	private static int appSize=5;///
+	private static int nrFogNodesPerRegion=10;
+	private static int nrRegions=5;
+	private static int nrAppsPerRegion=5;
+	private static int appSize=1;
 	//private static int compGrade=2;
-	private static int nrEndDevicesPerRegion=nrFogNodesPerRegion;///
-	private static int nrAdditionalLinks=nrFogNodesPerRegion*2;///
+	private static int nrEndDevicesPerRegion=10;
+	private static int nrAdditionalLinks=nrFogNodesPerRegion*2;
 	private static int nrNeighborsOfEndDevice=2;
-	private static int nrNodesToShareWithNeighbor=nrFogNodesPerRegion/10;
+	private static int nrNodesToShareWithNeighbor=1;
 	public static Random random;
 	private static Server cloud;
 	private static Infrastructure infra;
