@@ -4,10 +4,10 @@ import java.util.Random;
 import java.util.Set;
 
 public class Main {
-	private static int nrFogNodesPerRegion=10;
-	private static int nrRegions=5;
+	private static int nrFogNodesPerRegion=40;
+	private static int nrRegions=20;
 	private static int nrAppsPerRegion=5;
-	private static int appSize=1;
+	private static int appSize=20;
 	//private static int compGrade=2;
 	private static int nrEndDevicesPerRegion=10;
 	private static int nrAdditionalLinks=nrFogNodesPerRegion*2;
@@ -17,7 +17,7 @@ public class Main {
 	private static Server cloud;
 	private static Infrastructure infra;
 	private static Colony colonies[];
-	private static boolean skipModel1=false;
+	private static boolean skipModel1=true;
 
 	private static void createInfra() {
 		infra=new Infrastructure();
@@ -223,10 +223,21 @@ public class Main {
 		fileWriter.close();
 	}
 
+	private static void doExperimentSB() {
+		OrchestratorSearchBased orch=new OrchestratorSearchBased(infra);
+		for(int j=0;j<nrAppsPerRegion;j++) {
+			for(int i=0;i<nrRegions;i++) {
+				Application app=colonies[i].getApplication(j);
+				orch.addApplication(app);
+			}
+		}
+	}
+
 	public static void main(String[] args) throws IOException {
 		random=new Random();
 		createInfra();
 		createApps();
 		doExperiment();
+		doExperimentSB();
 	}
 }

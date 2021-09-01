@@ -37,4 +37,8 @@ public class Component implements ISwNode {
 	public String toString() {
 		return id+"("+cpuReq+","+ramReq+")";
 	}
+
+	public boolean isEndDevice() {
+		return false;
+	}
 }

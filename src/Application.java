@@ -23,4 +23,8 @@ public class Application {
 	public Component getRandomComponent() {
 		return components.get(Main.random.nextInt(components.size()));
 	}
+
+	public List<Component> getComponents() {
+		return components;
+	}
 }

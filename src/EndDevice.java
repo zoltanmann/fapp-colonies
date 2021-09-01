@@ -35,4 +35,8 @@ public class EndDevice implements ISwNode, IHwNode {
 	public String getId() {
 		return id;
 	}
+
+	public boolean isEndDevice() {
+		return true;
+	}
 }
