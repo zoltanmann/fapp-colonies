@@ -5,7 +5,7 @@ import java.util.Set;
 
 public class Colony {
 	private Set<IHwNode> nodes;
-	private List<Server> fogNodes;
+	private List<Server> servers;
 	private List<EndDevice> endDevices;
 	private Set<Colony> neighbors;
 	private List<Application> applications;
@@ -13,15 +13,15 @@ public class Colony {
 
 	public Colony() {
 		nodes=new HashSet<>();
-		fogNodes=new ArrayList<>();
+		servers=new ArrayList<>();
 		endDevices=new ArrayList<>();
 		neighbors=new HashSet<>();
 		applications=new ArrayList<>();
 		sharedNodes=new HashSet<>();
 	}
 
-	public void addFogNode(Server node) {
-		fogNodes.add(node);
+	public void addServer(Server node) {
+		servers.add(node);
 		nodes.add(node);
 	}
 
@@ -30,8 +30,8 @@ public class Colony {
 		nodes.add(node);
 	}
 
-	public Server getRandomFogNode() {
-		return fogNodes.get(Main.random.nextInt(fogNodes.size()));
+	public Server getRandomServer() {
+		return servers.get(Main.random.nextInt(servers.size()));
 	}
 
 	public EndDevice getRandomEndDevice() {
@@ -50,8 +50,8 @@ public class Colony {
 		return applications.get(i);
 	}
 
-	public List<Server> getFogNodes() {
-		return fogNodes;
+	public List<Server> getServers() {
+		return servers;
 	}
 
 	public List<EndDevice> getEndDevices() {
@@ -69,7 +69,7 @@ public class Colony {
 	public Set<Server> shareNodes(int k) {
 		Set<Server> result=new HashSet<>();
 		List<Server> potentialNodesToShare=new ArrayList<>();
-		for(Server s : fogNodes) {
+		for(Server s : servers) {
 			if(!sharedNodes.contains(s) && !s.getId().equals("cloud"))
 				potentialNodesToShare.add(s);
 		}
@@ -82,10 +82,14 @@ public class Colony {
 		return result;
 	}
 
+	public Set<Server> getSharedNodes() {
+		return sharedNodes;
+	}
+
 	public Colony clone() {
 		Colony other=new Colony();
 		other.nodes.addAll(nodes);
-		other.fogNodes.addAll(fogNodes);
+		other.servers.addAll(servers);
 		other.endDevices.addAll(endDevices);
 		other.neighbors.addAll(neighbors);
 		other.applications.addAll(applications);

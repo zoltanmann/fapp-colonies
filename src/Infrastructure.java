@@ -188,7 +188,7 @@ public class Infrastructure {
 	public Infrastructure getSubInfra(Set<Colony> colonies, Server cloud) {
 		Infrastructure subInfra=new Infrastructure();
 		for(Colony colony : colonies) {
-			for(Server s : colony.getFogNodes())
+			for(Server s : colony.getServers())
 				subInfra.addServer(s);
 			for(EndDevice d : colony.getEndDevices())
 				subInfra.addEndDevice(d);

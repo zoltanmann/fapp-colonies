@@ -57,7 +57,7 @@ public class Orchestrator {
 		for(Orchestrator neighbor : neighbors) {
 			for(Component comp : neighbor.getCompMapping().keySet()) {
 				Server s=neighbor.getCompMapping().get(comp);
-				if(coordModel==3 || (coordModel==4 && colony.getFogNodes().contains(s))) {
+				if(coordModel==3 || (coordModel==4 && colony.getServers().contains(s))) {
 					allComponents.add(comp);
 					foreignCompMapping.put(comp, s);
 				}
@@ -86,7 +86,7 @@ public class Orchestrator {
 			for(ISwNode sn : allSwNodes) {
 				for(IHwNode hn : allHwNodes) {
 					double objWeight=0;
-					if(coordModel==3 && !colony.getFogNodes().contains(hn))
+					if(coordModel==3 && !colony.getServers().contains(hn))
 						objWeight=mu;
 					if(coordModel==4 && colony.isShared(hn))
 						objWeight=nu;
@@ -265,13 +265,13 @@ public class Orchestrator {
 								components.add(comp);
 								System.out.println("Allocating component "+comp.getId()+" to own server "+s.getId());
 							} else {
-								if(colony.getFogNodes().contains(s)) {
+								if(colony.getServers().contains(s)) {
 									compMapping.put(comp,s);
 									components.add(comp);
 									System.out.println("Allocating component "+comp.getId()+" to own server "+s.getId());
 								} else {
 									for(Orchestrator orch : neighbors) {
-										if(orch.colony.getFogNodes().contains(s)) {
+										if(orch.colony.getServers().contains(s)) {
 											orch.compMapping.put(comp, s);
 											orch.components.add(comp);
 											System.out.println("Allocating component "+comp.getId()+" to neighbor's server "+s.getId());

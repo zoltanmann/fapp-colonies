@@ -6,12 +6,14 @@ public class Component implements ISwNode {
 	private double cpuReq;
 	private double ramReq;
 	private Set<Connector> connectors;
+	private Colony targetColony;
 
-	public Component(String id, double cpuReq, double ramReq) {
+	public Component(String id, double cpuReq, double ramReq, Colony targetColony) {
 		this.id=id;
 		this.cpuReq = cpuReq;
 		this.ramReq = ramReq;
 		connectors=new HashSet<>();
+		this.targetColony=targetColony;
 	}
 
 	public double getCpuReq() {
@@ -24,6 +26,10 @@ public class Component implements ISwNode {
 
 	public String getId() {
 		return id;
+	}
+
+	public Colony getTargetColony() {
+		return targetColony;
 	}
 
 	public Set<Connector> getConnectors() {

@@ -45,17 +45,17 @@ public class Main {
 			double ramCap=random.nextDouble()*9+1;
 			Server s=new Server(serverId,cpuCap,ramCap);
 			if(i>0) {
-				Server s0=colonies[index].getRandomFogNode();
+				Server s0=colonies[index].getRandomServer();
 				double bw=random.nextDouble()*4+1;
 				double latency=random.nextDouble()*4+1;
 				new Link(bw,latency,s0,s);
 			}
 			infra.addServer(s);
-			colonies[index].addFogNode(s);
+			colonies[index].addServer(s);
 		}
 		for(int i=0;i<nrAdditionalLinks;i++) {
-			Server s1=colonies[index].getRandomFogNode();
-			Server s2=colonies[index].getRandomFogNode();
+			Server s1=colonies[index].getRandomServer();
+			Server s2=colonies[index].getRandomServer();
 			if(s1==s2)
 				continue;
 			double bw=random.nextDouble()*4+1;
@@ -65,7 +65,7 @@ public class Main {
 		for(int i=0;i<nrEndDevicesPerRegion;i++) {
 			EndDevice d=new EndDevice("d"+index+"."+i);
 			for(int j=0;j<nrNeighborsOfEndDevice;j++) { ///
-				Server s=colonies[index].getRandomFogNode();
+				Server s=colonies[index].getRandomServer();
 				double bw=random.nextDouble()*5+5;
 				double latency=random.nextDouble()*3;
 				new Link(bw,latency,s,d);
@@ -73,11 +73,11 @@ public class Main {
 			infra.addEndDevice(d);
 			colonies[index].addEndDevice(d);
 		}
-		Server s=colonies[index].getRandomFogNode();
+		Server s=colonies[index].getRandomServer();
 		double bw=random.nextDouble()*4+1;
 		double latency=random.nextDouble()*40+40;///
 		new Link(bw,latency,s,cloud);
-		colonies[index].addFogNode(cloud);
+		colonies[index].addServer(cloud);
 	}
 
 	private static void connectRegions(Colony region1, Colony region2) {
@@ -85,8 +85,8 @@ public class Main {
 		region2.addNeighbor(region1);
 		Server s1,s2;
 		do {
-			s1=region1.getRandomFogNode();
-			s2=region2.getRandomFogNode();
+			s1=region1.getRandomServer();
+			s2=region2.getRandomServer();
 		} while(s1==s2 || s1==cloud || s2==cloud);
 		double bw=random.nextDouble()*4+1;
 		double latency=random.nextDouble()*4+1;
@@ -98,7 +98,7 @@ public class Main {
 		for(int i=0;i<appSize;i++) {
 			double cpuReq=random.nextDouble()*5;
 			double ramReq=random.nextDouble()*5;
-			Component comp=new Component(idPrefix+i, cpuReq, ramReq);
+			Component comp=new Component(idPrefix+i, cpuReq, ramReq, region);
 			if(i>0) {
 				double bwReq=random.nextDouble()*3;
 				double maxLatency=random.nextDouble()*30+30;///
@@ -166,7 +166,7 @@ public class Main {
 					bigColonies[i].addNeighbor(bigColonies[j]);
 					Set<Server> shared=bigColonies[i].shareNodes(nrNodesToShareWithNeighbor);
 					for(Server s : shared)
-						bigColonies[j].addFogNode(s);
+						bigColonies[j].addServer(s);
 				}
 			}
 		}
