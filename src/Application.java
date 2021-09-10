@@ -32,7 +32,7 @@ public class Application {
 	}
 
 	/**
-	 * Get the i-th components in the list of components. PRE: i is at least 0 and
+	 * Get the i-th component in the list of components. PRE: i is at least 0 and
 	 * less than the number of components.
 	 */
 	public Component getComponent(int i) {

@@ -11,13 +11,20 @@ import java.util.Set;
 public class Colony {
 	/** The set of all HW nodes in the colony, including end devices, fog nodes, cloud */
 	private Set<IHwNode> nodes;
-	/** The set of all servers in the colony, including fog nodes and the cloud */
+	/** The list of all servers in the colony, including fog nodes and the cloud */
 	private List<Server> servers;
+	/** The list of end devices belonging to the colony */
 	private List<EndDevice> endDevices;
+	/** The set of neighboring colonies */
 	private Set<Colony> neighbors;
+	/** The list of applications designated for this colony */
 	private List<Application> applications;
+	/** The set of servers shared with neighboring colonies */
 	private Set<Server> sharedNodes;
 
+	/**
+	 * Construct empty colony.
+	 */
 	public Colony() {
 		nodes=new HashSet<>();
 		servers=new ArrayList<>();
@@ -27,52 +34,93 @@ public class Colony {
 		sharedNodes=new HashSet<>();
 	}
 
+	/**
+	 * Add a server to the colony.
+	 */
 	public void addServer(Server node) {
 		servers.add(node);
 		nodes.add(node);
 	}
 
+	/**
+	 * Add an end device to the colony.
+	 */
 	public void addEndDevice(EndDevice node) {
 		endDevices.add(node);
 		nodes.add(node);
 	}
 
+	/**
+	 * Get a randomly chosen server of the colony. PRE: the colony contains at least
+	 * one server, and Main.random has already been initialized.
+	 */
 	public Server getRandomServer() {
 		return servers.get(Main.random.nextInt(servers.size()));
 	}
 
+	/**
+	 * Get a randomly chosen end device of the colony. PRE: the colony contains at 
+	 * least one end device, and Main.random has already been initialized.
+	 */
 	public EndDevice getRandomEndDevice() {
 		return endDevices.get(Main.random.nextInt(endDevices.size()));
 	}
 
+	/**
+	 * Add a colony to the set of neighboring colonies.
+	 */
 	public void addNeighbor(Colony col) {
 		neighbors.add(col);
 	}
 
+	/**
+	 * Add an application to the list of applications designated for this colony.
+	 * The applications designated for the colony will be processed in the order in 
+	 * which they were added. 
+	 */
 	public void addApplication(Application a) {
 		applications.add(a);
 	}
 
+	/**
+	 * Get the i-th application designated for this colony. PRE: i is at least 0 and
+	 * less than the number of applications designated for this colony.
+	 */
 	public Application getApplication(int i) {
 		return applications.get(i);
 	}
 
+	/**
+	 * Get the list of servers (fog nodes and the cloud) contained in this colony.
+	 */
 	public List<Server> getServers() {
 		return servers;
 	}
 
+	/**
+	 * Get the list of end devices belonging to this colony.
+	 */
 	public List<EndDevice> getEndDevices() {
 		return endDevices;
 	}
 
+	/**
+	 * Get the set of neighboring colonies.
+	 */
 	public Set<Colony> getNeighbors() {
 		return neighbors;
 	}
 
+	/**
+	 * Returns whether the given colony is a neighbor of this colony.
+	 */
 	public boolean isAdjacentTo(Colony other) {
 		return neighbors.contains(other);
 	}
 
+	/**
+	 * Enlarge the colony such with k servers from each neighboring colony.
+	 */
 	public Set<Server> shareNodes(int k) {
 		Set<Server> result=new HashSet<>();
 		List<Server> potentialNodesToShare=new ArrayList<>();

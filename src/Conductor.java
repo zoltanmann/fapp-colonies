@@ -24,9 +24,9 @@ public class Conductor {
 	}
 
 	/**
-	 * Add an application to the given colony.
+	 * Deploy an application to the given colony.
 	 */
-	public Result addApplication(Colony colony,Application app) {
+	public Result deployApplication(Colony colony,Application app) {
 		Set<Server> freelyUsableServers=null;
 		Set<Server> unpreferredServers=null;
 		Set<Component> newComponents=new HashSet<>(app.getComponents());
