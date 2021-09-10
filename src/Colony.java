@@ -119,7 +119,13 @@ public class Colony {
 	}
 
 	/**
-	 * Enlarge the colony such with k servers from each neighboring colony.
+	 * Pick k random fog nodes from this colony, to be shared with a neighboring
+	 * colony. The selected fog nodes are marked as shared and returned, but the
+	 * neighboring colonies are not changed by this method.
+	 * The cloud is never selected for sharing.
+	 * Already shared servers are not selected.
+	 * PRE: k is not more than the number of fog nodes in the colony that are not
+	 * shared yet.
 	 */
 	public Set<Server> shareNodes(int k) {
 		Set<Server> result=new HashSet<>();
@@ -137,10 +143,16 @@ public class Colony {
 		return result;
 	}
 
+	/**
+	 * Return the set of fog nodes shared with neighboring colonies.
+	 */
 	public Set<Server> getSharedNodes() {
 		return sharedNodes;
 	}
 
+	/**
+	 * Return a shallow copy of this colony.
+	 */
 	public Colony clone() {
 		Colony other=new Colony();
 		other.nodes.addAll(nodes);
@@ -152,10 +164,16 @@ public class Colony {
 		return other;
 	}
 
+	/**
+	 * Return if the given HW node is shared with a neighboring colony.
+	 */
 	public boolean isShared(IHwNode s) {
 		return sharedNodes.contains(s);
 	}
 
+	/**
+	 * Empty the set of neighboring colonies.
+	 */
 	public void removeNeighbors() {
 		neighbors.clear();
 	}
