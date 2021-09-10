@@ -3,8 +3,15 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * Represents a fog colony, by storing the infrastructure nodes (end devices, fog 
+ * nodes, cloud) contained in the colony. The Colony knows which applications it
+ * has to host, but does not maintain the specific placement. 
+ */
 public class Colony {
+	/** The set of all HW nodes in the colony, including end devices, fog nodes, cloud */
 	private Set<IHwNode> nodes;
+	/** The set of all servers in the colony, including fog nodes and the cloud */
 	private List<Server> servers;
 	private List<EndDevice> endDevices;
 	private Set<Colony> neighbors;

@@ -7,16 +7,25 @@ import java.util.Set;
 public class Conductor {
 	/** Supported approaches for decentralization and coordination */
 	enum ModeType {centralized,independent,communicating,overlapping}
+	/** 1:1 relation to a BookKeeper */
 	private BookKeeper bookKeeper;
+	/** The decentralization and coordination model used in the experiments */
 	private ModeType mode;
+	/** 1:1 relation to a Solver */
 	private SolverSB solver;
 
+	/**
+	 * Construct the Conductor and create the linked Solver as well.
+	 */
 	public Conductor(BookKeeper bookKeeper,ModeType mode) {
 		this.bookKeeper=bookKeeper;
 		this.mode=mode;
 		solver=new SolverSB(bookKeeper);
 	}
 
+	/**
+	 * Add an application to the given colony.
+	 */
 	public Result addApplication(Colony colony,Application app) {
 		Set<Server> freelyUsableServers=null;
 		Set<Server> unpreferredServers=null;
