@@ -57,18 +57,31 @@ public class Component implements ISwNode {
 		return targetColony;
 	}
 
+	/**
+	 * Return the set of connectors incident to this component.
+	 */
 	public Set<Connector> getConnectors() {
 		return connectors;
 	}
 
+	/**
+	 * Add a new connector to the set of connectors incident to this component.
+	 */
 	public void addConnector(Connector conn) {
 		connectors.add(conn);
 	}
 
+	/**
+	 * Return string representation.
+	 */
 	public String toString() {
 		return id+"("+cpuReq+","+ramReq+")";
 	}
 
+	/**
+	 * From interface ISwNode.
+	 */
+	@Override
 	public boolean isEndDevice() {
 		return false;
 	}
