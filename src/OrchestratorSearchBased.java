@@ -7,7 +7,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Search-based orchestrator. Solves the optimization problem by trying to place new
+ * components one by one in decreasing order of their size. If this is not successful,
+ * the algorithm tries to migrate some already placed components to see if this way
+ * more components can be placed.
+ */
 public class OrchestratorSearchBased {
+	/**  */
 	private Infrastructure infra;
 	private Set<Component> components;
 	private Map<Component,Server> alpha;

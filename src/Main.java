@@ -3,22 +3,44 @@ import java.io.IOException;
 import java.util.Random;
 import java.util.Set;
 
+/**
+ * Experiment driver class. Everything in this class is static, so that it does not
+ * need to be instantiated, but can be used directly from the main() method.
+ */
 public class Main {
+	/** Nr. of fog nodes per region */
 	private static int nrFogNodesPerRegion=40;
+	/** Nr. of regions */
 	private static int nrRegions=20;
+	/** Nr. of applications per region */
 	private static int nrAppsPerRegion=5;
+	/** Nr. of fog components per application */
 	private static int appSize=20;
+	/** Nr. of fog nodes per region */
+	//not used anymore
 	//private static int compGrade=2;
+	/** Nr. of end devices per region */
 	private static int nrEndDevicesPerRegion=10;
+	/** Nr. of additional links among servers after creating an initial tree architecture. This number of links is tried to be created; the actual number of created links may be less */
 	private static int nrAdditionalLinks=nrFogNodesPerRegion*2;
+	/** Nr. of servers connected to an end device */
 	private static int nrNeighborsOfEndDevice=2;
+	/** Nr. of fog nodes per colony that will be shared with each neighboring colony  */
 	private static int nrNodesToShareWithNeighbor=1;
+	/** Random generator that can be used by any class in the program */
 	public static Random random;
+	/** The cloud, which is contaned in each colony */
 	private static Server cloud;
+	/** The complete infrastructure */
 	private static Infrastructure infra;
+	/** Set of all fog colonies */
 	private static Colony colonies[];
+	/** To accelerate experiments, the centralized approach can be switched off with this flag */
 	private static boolean skipModel1=true;
 
+	/**
+	 * Creates the infrastructure, including the colonies, and the path information.
+	 */
 	private static void createInfra() {
 		infra=new Infrastructure();
 		cloud=new Server("cloud", 1000000, 1000000);
@@ -38,6 +60,10 @@ public class Main {
 		infra.determinePaths(2);
 	}
 
+	/**
+	 * Creates the infrastructure in the fog colony (including end devices and the
+	 * cloud) with the given index.
+	 */
 	private static void createRegion(int index) {
 		for(int i=0;i<nrFogNodesPerRegion;i++) {
 			String serverId="s"+index+"."+i;
@@ -80,6 +106,10 @@ public class Main {
 		colonies[index].addServer(cloud);
 	}
 
+	/**
+	 * Creates a link between a random fog node in region1 and a random fog node in
+	 * region2.
+	 */
 	private static void connectRegions(Colony region1, Colony region2) {
 		region1.addNeighbor(region2);
 		region2.addNeighbor(region1);
@@ -93,6 +123,12 @@ public class Main {
 		new Link(bw,latency,s1,s2);
 	}
 
+	/**
+	 * Create an application targeted to the given fog colony. The idPrefix should
+	 * be unique among the applications, e.g., c1.2 for application 2 in colony 1.
+	 * This prefix is used to create unique IDs for the components. The application
+	 * also includes a connection to a random end device of the fog colony.
+	 */
 	private static Application createApp(Colony region, String idPrefix) {
 		Application app=new Application();
 		for(int i=0;i<appSize;i++) {
@@ -126,6 +162,9 @@ public class Main {
 		return app;
 	}
 
+	/**
+	 * Create all applications.
+	 */
 	private static void createApps() {
 		for(int j=0;j<nrAppsPerRegion;j++) {
 			for(int i=0;i<nrRegions;i++) {
@@ -135,6 +174,9 @@ public class Main {
 		}
 	}
 
+	/**
+	 * Perform the experiments.
+	 */
 	private static void doExperiment() throws IOException {
 		int nrModels=4;
 		Orchestrator orchestrators[][]=new Orchestrator[nrModels][nrRegions];
@@ -223,6 +265,9 @@ public class Main {
 		fileWriter.close();
 	}
 
+	/**
+	 * Perform the experiments with the search-based algorithm.
+	 */
 	private static void doExperimentSB() {
 		OrchestratorSearchBased orch=new OrchestratorSearchBased(infra);
 		for(int j=0;j<nrAppsPerRegion;j++) {
@@ -233,6 +278,9 @@ public class Main {
 		}
 	}
 
+	/**
+	 * Main method.
+	 */
 	public static void main(String[] args) throws IOException {
 		random=new Random();
 		createInfra();

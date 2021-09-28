@@ -11,6 +11,11 @@ import gurobi.GRBLinExpr;
 import gurobi.GRBModel;
 import gurobi.GRBVar;
 
+/**
+ * ILP-based orchestrator. Solves the optimization problem by transforming it to an
+ * integer program using the Gurobi interface, letting Gurobi solve the problem, and
+ * then converting Gurobi's solution to a solution of the original problem.
+ */
 public class Orchestrator {
 	private Infrastructure infra;
 	private Set<Component> components;
