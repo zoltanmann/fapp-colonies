@@ -27,12 +27,12 @@ public class Conductor {
 	 * Deploy an application to the given colony.
 	 */
 	public Result deployApplication(Colony colony,Application app) {
-		Set<Server> freelyUsableServers=null;
-		Set<Server> unpreferredServers=null;
-		Set<Component> newComponents=new HashSet<>(app.getComponents());
-		Set<Component> fullyControlledComponents=null;
-		Set<Component> obtainedComponents=null;
-		Set<Component> readOnlyComponents=null;
+		Set<Server> freelyUsableServers=null; //servers that should be preferred for placement
+		Set<Server> unpreferredServers=null; //additional servers that can be used for placement if necessary
+		Set<Component> newComponents=new HashSet<>(app.getComponents()); //newly submitted components that are not placed yet
+		Set<Component> fullyControlledComponents=null; //already placed components whose placement is in our control
+		Set<Component> obtainedComponents=null; //already placed components that we got from another colony and hence must not forward it to a third colony
+		Set<Component> readOnlyComponents=null; //already placed components in a neighboring colony that have a connector to a component in our colony
 		switch(mode) {
 		case centralized:
 			freelyUsableServers=bookKeeper.getInfra().getServers();

@@ -4,8 +4,9 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Keeps track of the components and connectors mapped on the infrastructure. There can be multiple
- * BookKeeper objects for the same infrastructure, keeping track of different experiments.
+ * Keeps track of the components and connectors mapped on the infrastructure. There 
+ * can be multiple BookKeeper objects for the same infrastructure, keeping track of 
+ * different experiments.
  */
 public class BookKeeper {
 	/** Reference to the infrastructure for read-only access */
@@ -51,6 +52,14 @@ public class BookKeeper {
 	 */
 	public Server getHost(Component c) {
 		return alpha.get(c);
+	}
+
+	/**
+	 * Return the path that the given connector is mapped on, or null if the connector 
+	 * is not routed.
+	 */
+	public Path getPath(Connector c) {
+		return beta.get(c);
 	}
 
 	/**
