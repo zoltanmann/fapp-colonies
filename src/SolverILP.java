@@ -11,7 +11,7 @@ import gurobi.GRBLinExpr;
 import gurobi.GRBModel;
 import gurobi.GRBVar;
 
-public class SolverILP {
+public class SolverILP implements ISolver {
 	/** Reference to the bookKeeper */
 	private BookKeeper bookKeeper;
 	private static final double mu=10;
@@ -65,6 +65,7 @@ public class SolverILP {
 	/**
 	 * Perform an optimization run, trying to place the new components.
 	 */
+	@Override
 	public Result optimize(
 			Set<Server> freelyUsableServers,
 			Set<Server> unpreferredServers,

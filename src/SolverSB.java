@@ -13,7 +13,7 @@ import java.util.Set;
  * maintained by the BookKeeper), i.e., the same solver object can be applied to 
  * different problem instances.
  */
-public class SolverSB {
+public class SolverSB implements ISolver {
 	/** Reference to the bookKeeper */
 	private BookKeeper bookKeeper;
 
@@ -113,6 +113,7 @@ public class SolverSB {
 	/**
 	 * Perform an optimization run, trying to place the new components.
 	 */
+	@Override
 	public Result optimize(
 			Set<Server> freelyUsableServers,
 			Set<Server> unpreferredServers,

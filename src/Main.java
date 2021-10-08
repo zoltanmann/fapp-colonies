@@ -8,6 +8,8 @@ import java.util.Set;
  * need to be instantiated, but can be used directly from the main() method.
  */
 public class Main {
+	enum SolverType {SolverSB, SolverILP}
+
 	/** Nr. of fog nodes per region */
 	private static int nrFogNodesPerRegion=40;
 	/** Nr. of regions */
@@ -16,9 +18,6 @@ public class Main {
 	private static int nrAppsPerRegion=5;
 	/** Nr. of fog components per application */
 	private static int appSize=20;
-	/** Nr. of fog nodes per region */
-	//not used anymore
-	//private static int compGrade=2;
 	/** Nr. of end devices per region */
 	private static int nrEndDevicesPerRegion=10;
 	/** Nr. of additional links among servers after creating an initial tree architecture. This number of links is tried to be created; the actual number of created links may be less */
@@ -178,25 +177,21 @@ public class Main {
 	 * Perform the experiments.
 	 */
 	private static void doExperiment() throws IOException {
-		int nrModels=4;
-		Orchestrator orchestrators[][]=new Orchestrator[nrModels][nrRegions];
-		Orchestrator model1Orchestrator=new Orchestrator(infra,1);
-		for(int i=0;i<nrRegions;i++) {
-			orchestrators[0][i]=model1Orchestrator;
-			Infrastructure subInfra=infra.getSubInfra(colonies[i], cloud, false);
-			orchestrators[1][i]=new Orchestrator(subInfra,2);
-			subInfra=infra.getSubInfra(colonies[i], cloud, true);
-			orchestrators[2][i]=new Orchestrator(subInfra,3);
-			orchestrators[2][i].setColony(colonies[i]);
-		}
-		for(int i=0;i<nrRegions;i++) {
-			for(int j=i+1;j<nrRegions;j++) {
-				if(colonies[i].isAdjacentTo(colonies[j])) {
-					orchestrators[2][i].addNeighbor(orchestrators[2][j]);
-					orchestrators[2][j].addNeighbor(orchestrators[2][i]);
-				}
+		//create Conductors, together with the corresponding BookKeepers and Solvers
+		Map2d<Conductor.ModeType,SolverType,Conductor> conductors=new Map2d<>();
+		for(Conductor.ModeType modeType : Conductor.ModeType.values()) {
+			for(SolverType solverType : SolverType.values()) {
+				BookKeeper bookKeeper=new BookKeeper(infra);
+				ISolver solver=null;
+				if(solverType==SolverType.SolverILP)
+					solver=new SolverILP(bookKeeper);
+				if(solverType==SolverType.SolverSB)
+					solver=new SolverSB(bookKeeper);
+				Conductor conductor=new Conductor(bookKeeper,solver,modeType);
+				conductors.put(modeType,solverType,conductor);
 			}
 		}
+		//create overlapping colonies
 		Colony[] bigColonies=new Colony[nrRegions];
 		for(int i=0;i<nrRegions;i++) {
 			bigColonies[i]=colonies[i].clone();
@@ -212,70 +207,71 @@ public class Main {
 				}
 			}
 		}
-		for(int i=0;i<nrRegions;i++) {
-			Infrastructure subInfra=infra.getSubInfra(bigColonies[i], cloud, false);
-			orchestrators[3][i]=new Orchestrator(subInfra,4);
-			orchestrators[3][i].setColony(bigColonies[i]);
-		}
-		for(int i=0;i<nrRegions;i++) {
-			for(int j=i+1;j<nrRegions;j++) {
-				if(bigColonies[i].isAdjacentTo(bigColonies[j])) {
-					orchestrators[3][i].addNeighbor(orchestrators[3][j]);
-					orchestrators[3][j].addNeighbor(orchestrators[3][i]);
-				}
-			}
-		}
+		//initialize file output
 		FileWriter fileWriter=new FileWriter("results_detail.csv");
 		fileWriter.write("App;NrRegions");
-		for(int k=0;k<nrModels;k++) {
-			fileWriter.write(";Success-model"+(k+1)+";TimeMs-model"+(k+1)+";Migrations-model"+(k+1));
+		for(Conductor.ModeType mode : Conductor.ModeType.values()) {
+			for(SolverType solver : SolverType.values()) {
+				String postfix="-"+mode+"-"+solver;
+				fileWriter.write(";Success"+postfix+";TimeMs"+postfix+";Migrations"+postfix);
+			}
 		}
 		fileWriter.write("\n");
-		Result grandTotalResults[]=new Result[nrModels];
-		for(int k=0;k<nrModels;k++)
-			grandTotalResults[k]=new Result();
+		//initialize grandTotalResults
+		Map2d<Conductor.ModeType,SolverType,Result> grandTotalResults=new Map2d<>();
+		for(Conductor.ModeType mode : Conductor.ModeType.values()) {
+			for(SolverType solver : SolverType.values()) {
+				grandTotalResults.put(mode,solver,new Result());
+			}
+		}
+		//main experiment cycle
 		for(int j=0;j<nrAppsPerRegion;j++) {
-			Result totalResults[]=new Result[nrModels];
-			for(int k=0;k<nrModels;k++)
-				totalResults[k]=new Result();
-			for(int i=0;i<nrRegions;i++) {
-				Application app=colonies[i].getApplication(j);
-				for(int k=0;k<nrModels;k++) {
-					System.out.println("app "+j+", region "+i+", model "+(k+1));
-					if(skipModel1 && k==0)
-						continue;
-					Result result=orchestrators[k][i].addApplication(app);
-					totalResults[k].increaseBy(result);
+			//initialize totalResults
+			Map2d<Conductor.ModeType,SolverType,Result> totalResults=new Map2d<>();
+			for(Conductor.ModeType mode : Conductor.ModeType.values()) {
+				for(SolverType solver : SolverType.values()) {
+					totalResults.put(mode,solver,new Result());
 				}
 			}
+			//add next application in each region
+			for(int i=0;i<nrRegions;i++) {
+				Application app=colonies[i].getApplication(j);
+				for(Conductor.ModeType mode : Conductor.ModeType.values()) {
+					for(SolverType solver : SolverType.values()) {
+						System.out.println("app "+j+", region "+i+", model "+mode+", solver"+solver);
+						if(skipModel1 && mode==Conductor.ModeType.centralized)
+							continue;
+						Conductor conductor=conductors.get(mode,solver);
+						Colony colony=colonies[i];
+						if(mode==Conductor.ModeType.overlapping)
+							colony=bigColonies[i];
+						Result result=conductor.deployApplication(colony,app);
+						totalResults.get(mode,solver).increaseBy(result);
+					}
+				}
+			}
+			//write result to file
 			fileWriter.write(String.format("%d;%d",j,nrRegions));
-			for(int k=0;k<nrModels;k++) {
-				fileWriter.write(";"+totalResults[k].toString());
-				fileWriter.flush();
-				grandTotalResults[k].increaseBy(totalResults[k]);
+			for(Conductor.ModeType mode : Conductor.ModeType.values()) {
+				for(SolverType solver : SolverType.values()) {
+					fileWriter.write(";"+totalResults.get(mode,solver).toString());
+					fileWriter.flush();
+					grandTotalResults.get(mode,solver).increaseBy(totalResults.get(mode,solver));
+				}
 			}
 			fileWriter.write("\n");
 			fileWriter.flush();
 		}
 		fileWriter.close();
+		//write aggregated results to the other file
 		fileWriter=new FileWriter("results_total.csv");
-		fileWriter.write("Model;Success;TimeMs;Migrations\n");
-		for(int k=0;k<nrModels;k++)
-			fileWriter.write(""+(k+1)+";"+grandTotalResults[k].toString()+"\n");
-		fileWriter.close();
-	}
-
-	/**
-	 * Perform the experiments with the search-based algorithm.
-	 */
-	private static void doExperimentSB() {
-		OrchestratorSearchBased orch=new OrchestratorSearchBased(infra);
-		for(int j=0;j<nrAppsPerRegion;j++) {
-			for(int i=0;i<nrRegions;i++) {
-				Application app=colonies[i].getApplication(j);
-				orch.addApplication(app);
+		fileWriter.write("Model;Solver;Success;TimeMs;Migrations\n");
+		for(Conductor.ModeType mode : Conductor.ModeType.values()) {
+			for(SolverType solver : SolverType.values()) {
+				fileWriter.write(""+mode+";"+solver+";"+grandTotalResults.get(mode,solver).toString()+"\n");
 			}
 		}
+		fileWriter.close();
 	}
 
 	/**
@@ -286,6 +282,5 @@ public class Main {
 		createInfra();
 		createApps();
 		doExperiment();
-		doExperimentSB();
 	}
 }

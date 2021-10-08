@@ -12,15 +12,15 @@ public class Conductor {
 	/** The decentralization and coordination model used in the experiments */
 	private ModeType mode;
 	/** 1:1 relation to a Solver */
-	private SolverSB solver;
+	private ISolver solver;
 
 	/**
-	 * Construct the Conductor and create the linked Solver as well.
+	 * Construct the Conductor.
 	 */
-	public Conductor(BookKeeper bookKeeper,ModeType mode) {
+	public Conductor(BookKeeper bookKeeper,ISolver solver,ModeType mode) {
 		this.bookKeeper=bookKeeper;
 		this.mode=mode;
-		solver=new SolverSB(bookKeeper);
+		this.solver=solver;
 	}
 
 	/**
