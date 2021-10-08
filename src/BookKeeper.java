@@ -141,12 +141,14 @@ public class BookKeeper {
 	}
 
 	/**
-	 * Remove a previously routed connector. PRE: the connector must be currently mapped on a path.
+	 * Remove a previously routed connector.
 	 */
 	public void unRoute(Connector conn) {
 		Path p=beta.get(conn);
-		for(Link l : p.getLinks())
-			freeBandwidth.put(l,freeBandwidth.get(l)+conn.getBwReq());
-		beta.remove(conn);
+		if(p!=null) {
+			for(Link l : p.getLinks())
+				freeBandwidth.put(l,freeBandwidth.get(l)+conn.getBwReq());
+			beta.remove(conn);
+		}
 	}
 }

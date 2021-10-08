@@ -76,12 +76,17 @@ public class SolverSB implements ISolver {
 	 * Place the given component on the given server AND route each connector that is
 	 * incident to the given component and goes to an already placed component. If
 	 * the given component already had a host (i.e., it has to be migrated), then 
-	 * unPlace() is called first. NB: this method does not check placeability; 
-	 * isPraceable() has to be called before this method.
+	 * unPlace() is called first, together with unRoute() for the incident connectors. 
+	 * NB: this method does not check placeability; isPraceable() has to be called 
+	 * before this method.
 	 */
 	private void place(Component c, Server s) {
-		if(bookKeeper.getHost(c)!=null)
+		if(bookKeeper.getHost(c)!=null) {
 			unPlace(c);
+			for(Connector conn : c.getConnectors()) {
+				bookKeeper.unRoute(conn);
+			}
+		}
 		bookKeeper.place(c,s);
 		for(Connector conn : c.getConnectors()) {
 			ISwNode otherVertex=conn.getOtherVertex(c);

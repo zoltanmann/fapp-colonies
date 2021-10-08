@@ -11,15 +11,15 @@ public class Main {
 	enum SolverType {SolverSB, SolverILP}
 
 	/** Nr. of fog nodes per region */
-	private static int nrFogNodesPerRegion=40;
+	private static int nrFogNodesPerRegion=50;
 	/** Nr. of regions */
-	private static int nrRegions=20;
+	private static int nrRegions=5;
 	/** Nr. of applications per region */
 	private static int nrAppsPerRegion=5;
 	/** Nr. of fog components per application */
-	private static int appSize=20;
+	private static int appSize=5;
 	/** Nr. of end devices per region */
-	private static int nrEndDevicesPerRegion=10;
+	private static int nrEndDevicesPerRegion=5;
 	/** Nr. of additional links among servers after creating an initial tree architecture. This number of links is tried to be created; the actual number of created links may be less */
 	private static int nrAdditionalLinks=nrFogNodesPerRegion*2;
 	/** Nr. of servers connected to an end device */
@@ -28,14 +28,14 @@ public class Main {
 	private static int nrNodesToShareWithNeighbor=1;
 	/** Random generator that can be used by any class in the program */
 	public static Random random;
-	/** The cloud, which is contaned in each colony */
+	/** The cloud, which is contained in each colony */
 	private static Server cloud;
 	/** The complete infrastructure */
 	private static Infrastructure infra;
 	/** Set of all fog colonies */
 	private static Colony colonies[];
 	/** To accelerate experiments, the centralized approach can be switched off with this flag */
-	private static boolean skipModel1=true;
+	private static boolean skipModel1=false;
 
 	/**
 	 * Creates the infrastructure, including the colonies, and the path information.
@@ -238,7 +238,7 @@ public class Main {
 				Application app=colonies[i].getApplication(j);
 				for(Conductor.ModeType mode : Conductor.ModeType.values()) {
 					for(SolverType solver : SolverType.values()) {
-						System.out.println("app "+j+", region "+i+", model "+mode+", solver"+solver);
+						System.out.println("app "+j+", region "+i+", model "+mode+", solver "+solver);
 						if(skipModel1 && mode==Conductor.ModeType.centralized)
 							continue;
 						Conductor conductor=conductors.get(mode,solver);

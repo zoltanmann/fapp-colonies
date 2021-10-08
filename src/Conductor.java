@@ -84,10 +84,10 @@ public class Conductor {
 			freelyUsableServers=new HashSet<>(colony.getServers());
 			freelyUsableServers.removeAll(colony.getSharedNodes());
 			unpreferredServers=colony.getSharedNodes();
-			fullyControlledComponents=bookKeeper.getComponents(colony);
-			for(Component c : fullyControlledComponents) {
-				if(c.getTargetColony()!=colony)
-					fullyControlledComponents.remove(c);
+			fullyControlledComponents=new HashSet<>();
+			for(Component c : bookKeeper.getComponents(colony)) {
+				if(c.getTargetColony()==colony)
+					fullyControlledComponents.add(c);
 			}
 			obtainedComponents=new HashSet<>();
 			readOnlyComponents=new HashSet<>();
