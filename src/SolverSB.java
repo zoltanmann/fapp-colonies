@@ -17,107 +17,138 @@ public class SolverSB implements ISolver {
 	/** Reference to the bookKeeper */
 	private BookKeeper bookKeeper;
 
+	/** Interface for undoable placement and routing actions */
 	interface IAction {
 		void doIt();
 		void undo();
 	}
 
+	/** Represents a placement action */
 	class PlaceAction implements IAction {
+		/** Component to place */
 		private Component c;
+		/** Server that should act as host */
 		private Server s;
 
+		/** Construct new action of placeing component c on server s */
 		public PlaceAction(Component c,Server s) {
 			this.c=c;
 			this.s=s;
 		}
 
+		/** Carry out the placement action */
 		@Override
 		public void doIt() {
 			bookKeeper.place(c,s);
 		}
 
+		/** Undo the placement action */
 		@Override
 		public void undo() {
 			bookKeeper.unPlace(c);
 		}
 	}
 
+	/** Represents the action of removing a component from a server (with the aim of migrating it) */
 	class UnPlaceAction implements IAction {
+		/** Component to un-place */
 		private Component c;
+		/** Old host of the component */
 		private Server s;
 
+		/** Construct new action of removing component c from server s */
 		public UnPlaceAction(Component c,Server s) {
 			this.c=c;
 			this.s=s;
 		}
 
+		/** Carry out the un-placement action */
 		@Override
 		public void doIt() {
 			bookKeeper.unPlace(c);
 		}
 
+		/** Undo the un-placement action */
 		@Override
 		public void undo() {
 			bookKeeper.place(c,s);
 		}
 	}
 
+	/** Represents the action of routing a connector via a path */
 	class RouteAction implements IAction {
+		/** Connector to route */
 		private Connector c;
+		/** Path via which the connector should be routed */
 		private Path p;
 
+		/** Construct new action of routing connector c via path p */
 		public RouteAction(Connector c,Path p) {
 			this.c=c;
 			this.p=p;
 		}
 
+		/** Carry out the routing action */
 		@Override
 		public void doIt() {
 			bookKeeper.route(c,p);
 		}
 
+		/** Undo the routing action */
 		@Override
 		public void undo() {
 			bookKeeper.unRoute(c);
 		}
 	}
 
+	/** Represents the action of un-routing a connector from a path (as part of a migration) */
 	class UnRouteAction implements IAction {
+		/** Connector to un-route */
 		private Connector c;
+		/** Path via which the connector was routed */
 		private Path p;
 
+		/** Construct new action of un-routing connector c from paath p */
 		public UnRouteAction(Connector c,Path p) {
 			this.c=c;
 			this.p=p;
 		}
 
+		/** Carry out the un-routing action */
 		@Override
 		public void doIt() {
 			bookKeeper.unRoute(c);
 		}
 
+		/** Undo the un-routing action */
 		@Override
 		public void undo() {
 			bookKeeper.route(c,p);
 		}
 	}
 
+	/** Stack of undoable actions, which supports rollback to a given point */
 	class ActionStack {
+		/** The list of actions */
 		private List<IAction> actions;
 
+		/** Construct empty stack */
 		public ActionStack() {
 			actions=new ArrayList<>();
 		}
 
+		/** Carry out the given action and add it to the stack, so that it can be undone if necessary */
 		public void perform(IAction action) {
 			action.doIt();
 			actions.add(action);
 		}
 
+		/** Get the current size of the stack, which can be later used to specify the target of a rollback */
 		public int getSize() {
 			return actions.size();
 		}
 
+		/** Undo actions until the stack shrinks to the given size */
 		public void rollback(int targetSize) {
 			while(actions.size()>targetSize) {
 				IAction action=actions.get(actions.size()-1);
@@ -127,6 +158,7 @@ public class SolverSB implements ISolver {
 		}
 	}
 
+	/** The stack of undoable actions */
 	private ActionStack actionStack;
 
 	/**
@@ -195,6 +227,11 @@ public class SolverSB implements ISolver {
 		return success;
 	}
 
+	/**
+	 * Try to migrate the given component on the given server AND to re-route each connector that is 
+	 * incident to the given component and goes to an already placed component. If successful, return
+	 * true. Otherwise, undo the changes and return false.
+	 */
 	private boolean tryToMigrate(Component c,Server newServer,Colony ourColony) {
 		int startSize=actionStack.getSize();
 		Server oldServer=bookKeeper.getHost(c);
