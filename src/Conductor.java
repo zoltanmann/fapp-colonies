@@ -53,14 +53,14 @@ public class Conductor {
 			unpreferredServers=new HashSet<>();
 			for(Colony colony2 : colony.getNeighbors())
 				unpreferredServers.addAll(colony2.getServers());
-			fullyControlledComponents=bookKeeper.getComponents(colony);
+			fullyControlledComponents=new HashSet<>();
 			obtainedComponents=new HashSet<>();
 			readOnlyComponents=new HashSet<>();
-			for(Component c : fullyControlledComponents) {
-				if(c.getTargetColony()!=colony) {
-					fullyControlledComponents.remove(c);
+			for(Component c : bookKeeper.getComponents(colony)) {
+				if(c.getTargetColony()==colony)
+					fullyControlledComponents.add(c);
+				else
 					obtainedComponents.add(c);
-				}
 			}
 			for(Colony neiCol : colony.getNeighbors()) {
 				for(Component c : bookKeeper.getComponents(neiCol)) {

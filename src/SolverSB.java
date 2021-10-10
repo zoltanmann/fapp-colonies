@@ -69,6 +69,7 @@ public class SolverSB implements ISolver {
 			if(findRoute(conn,s,otherHwNode)==null)
 				return false;
 		}
+		//TODO: problem the fact that each connector is routeable on its own does not mean that they can all be routed at once
 		return true;
 	}
 

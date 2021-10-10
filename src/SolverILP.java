@@ -50,13 +50,33 @@ public class SolverILP implements ISolver {
 	}
 
 	/**
-	 * Helper method to determine the set of paths among the given set of HW nodes.
+	 * Helper method to determine the set of paths between the two given HW nodes, given the set of
+	 * all relevant nodes.
+	 */
+	private Set<Path> getRelevantPaths(Infrastructure infra,IHwNode n1,IHwNode n2,Set<IHwNode> nodes) {
+		Set<Path> paths=new HashSet<>();
+		for(Path p : infra.getPaths(n1,n2)) {
+			boolean good=true;
+			for(IHwNode n : p.getNodes()) {
+				if(!nodes.contains(n)) {
+					good=false;
+					break;
+				}
+			}
+			if(good)
+				paths.add(p);
+		}
+		return paths;
+	}
+
+	/**
+	 * Helper method to determine the set of all paths among the given set of HW nodes.
 	 */
 	private Set<Path> getRelevantPaths(Infrastructure infra,Set<IHwNode> nodes) {
 		Set<Path> paths=new HashSet<>();
 		for(IHwNode node1 : nodes) {
 			for(IHwNode node2 : nodes) {
-				paths.addAll(infra.getPaths(node1, node2));
+				paths.addAll(getRelevantPaths(infra,node1,node2,nodes));
 			}
 		}
 		return paths;
@@ -168,7 +188,7 @@ public class SolverILP implements ISolver {
 					for(IHwNode n2 : allHwNodes) {
 						GRBLinExpr expr = new GRBLinExpr();
 						GRBVar x2=x.get(conn.getV2(), n2);
-						for(Path p : infra.getPaths(n1, n2)) {
+						for(Path p : getRelevantPaths(infra,n1,n2,allHwNodes)) {
 							GRBVar yVar=y.get(conn, p);
 							expr.addTerm(1,yVar);
 						}

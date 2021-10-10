@@ -11,7 +11,7 @@ public class Main {
 	enum SolverType {SolverSB, SolverILP}
 
 	/** Nr. of fog nodes per region */
-	private static int nrFogNodesPerRegion=50;
+	private static int nrFogNodesPerRegion=5;
 	/** Nr. of regions */
 	private static int nrRegions=5;
 	/** Nr. of applications per region */
