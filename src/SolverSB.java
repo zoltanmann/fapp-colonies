@@ -17,11 +17,124 @@ public class SolverSB implements ISolver {
 	/** Reference to the bookKeeper */
 	private BookKeeper bookKeeper;
 
+	interface IAction {
+		void doIt();
+		void undo();
+	}
+
+	class PlaceAction implements IAction {
+		private Component c;
+		private Server s;
+
+		public PlaceAction(Component c,Server s) {
+			this.c=c;
+			this.s=s;
+		}
+
+		@Override
+		public void doIt() {
+			bookKeeper.place(c,s);
+		}
+
+		@Override
+		public void undo() {
+			bookKeeper.unPlace(c);
+		}
+	}
+
+	class UnPlaceAction implements IAction {
+		private Component c;
+		private Server s;
+
+		public UnPlaceAction(Component c,Server s) {
+			this.c=c;
+			this.s=s;
+		}
+
+		@Override
+		public void doIt() {
+			bookKeeper.unPlace(c);
+		}
+
+		@Override
+		public void undo() {
+			bookKeeper.place(c,s);
+		}
+	}
+
+	class RouteAction implements IAction {
+		private Connector c;
+		private Path p;
+
+		public RouteAction(Connector c,Path p) {
+			this.c=c;
+			this.p=p;
+		}
+
+		@Override
+		public void doIt() {
+			bookKeeper.route(c,p);
+		}
+
+		@Override
+		public void undo() {
+			bookKeeper.unRoute(c);
+		}
+	}
+
+	class UnRouteAction implements IAction {
+		private Connector c;
+		private Path p;
+
+		public UnRouteAction(Connector c,Path p) {
+			this.c=c;
+			this.p=p;
+		}
+
+		@Override
+		public void doIt() {
+			bookKeeper.unRoute(c);
+		}
+
+		@Override
+		public void undo() {
+			bookKeeper.route(c,p);
+		}
+	}
+
+	class ActionStack {
+		private List<IAction> actions;
+
+		public ActionStack() {
+			actions=new ArrayList<>();
+		}
+
+		public void perform(IAction action) {
+			action.doIt();
+			actions.add(action);
+		}
+
+		public int getSize() {
+			return actions.size();
+		}
+
+		public void rollback(int targetSize) {
+			while(actions.size()>targetSize) {
+				IAction action=actions.get(actions.size()-1);
+				action.undo();
+				actions.remove(actions.size()-1);
+			}
+		}
+	}
+
+	private ActionStack actionStack;
+
 	/**
 	 * Constructor.
 	 */
 	public SolverSB(BookKeeper bookKeeper) {
 		this.bookKeeper=bookKeeper;
+		actionStack=new ActionStack();
 	}
 
 	/**
@@ -44,11 +157,12 @@ public class SolverSB implements ISolver {
 	}
 
 	/**
-	 * Determines if the given component can be placed on the given server AND each
-	 * connector that is incident to the given component and goes to an already placed
-	 * component can be routed if the given component is placed on the given server.
+	 * Try to place the given component on the given server AND to route each connector that is 
+	 * incident to the given component and goes to an already placed component. If successful, return
+	 * true. Otherwise, undo the changes and return false.
 	 */
-	private boolean isPlaceable(Component c, Server s, Colony ourColony) {
+	private boolean tryToPlace(Component c,Server s,Colony ourColony) {
+		boolean success=true;
 		//A component that colony k received from colony k' may only be placed in k or k' 
 		Colony targetColony=c.getTargetColony();
 		if(targetColony!=ourColony && !ourColony.getServers().contains(s) && !targetColony.getServers().contains(s))
@@ -57,38 +171,8 @@ public class SolverSB implements ISolver {
 			return false;
 		if(bookKeeper.getFreeRamCap(s) < c.getRamReq())
 			return false;
-		for(Connector conn : c.getConnectors()) {
-			ISwNode otherVertex=conn.getOtherVertex(c);
-			IHwNode otherHwNode;
-			if(otherVertex.isEndDevice())
-				otherHwNode=(EndDevice)otherVertex;
-			else
-				otherHwNode=bookKeeper.getHost((Component)otherVertex);
-			if(otherHwNode==null) //other component has not been placed yet
-				continue;
-			if(findRoute(conn,s,otherHwNode)==null)
-				return false;
-		}
-		//TODO: problem the fact that each connector is routeable on its own does not mean that they can all be routed at once
-		return true;
-	}
-
-	/**
-	 * Place the given component on the given server AND route each connector that is
-	 * incident to the given component and goes to an already placed component. If
-	 * the given component already had a host (i.e., it has to be migrated), then 
-	 * unPlace() is called first, together with unRoute() for the incident connectors. 
-	 * NB: this method does not check placeability; isPraceable() has to be called 
-	 * before this method.
-	 */
-	private void place(Component c, Server s) {
-		if(bookKeeper.getHost(c)!=null) {
-			unPlace(c);
-			for(Connector conn : c.getConnectors()) {
-				bookKeeper.unRoute(conn);
-			}
-		}
-		bookKeeper.place(c,s);
+		int startStackSize=actionStack.getSize();
+		actionStack.perform(new PlaceAction(c,s));
 		for(Connector conn : c.getConnectors()) {
 			ISwNode otherVertex=conn.getOtherVertex(c);
 			IHwNode otherHwNode;
@@ -99,21 +183,42 @@ public class SolverSB implements ISolver {
 			if(otherHwNode==null) //other component has not been placed yet
 				continue;
 			Path p=findRoute(conn,s,otherHwNode);
-			bookKeeper.route(conn,p);
+			if(p!=null)
+				actionStack.perform(new RouteAction(conn,p));
+			else {
+				success=false;
+				break;
+			}
 		}
+		if(!success)
+			actionStack.rollback(startStackSize);
+		return success;
+	}
+
+	private boolean tryToMigrate(Component c,Server newServer,Colony ourColony) {
+		int startSize=actionStack.getSize();
+		Server oldServer=bookKeeper.getHost(c);
+		actionStack.perform(new UnPlaceAction(c,oldServer));
+		for(Connector conn : c.getConnectors()) {
+			if(bookKeeper.getPath(conn)!=null)
+				actionStack.perform(new UnRouteAction(conn,bookKeeper.getPath(conn)));
+		}
+		boolean success=tryToPlace(c,newServer,ourColony);
+		if(!success)
+			actionStack.rollback(startSize);
+		return success;
 	}
 
 	/**
-	 * Removes the given component from its current host AND un-routes all connectors
-	 * incident to this component. 
+	 * Helper method to create the union of an arbitrary number of sets of the same type of objects in 
+	 * the form a single list.
 	 */
-	private void unPlace(Component c) {
-		if(bookKeeper.getHost(c)==null)
-			return;
-		bookKeeper.unPlace(c);
-		for(Connector conn : c.getConnectors()) {
-			bookKeeper.unRoute(conn);
-		}
+	@SafeVarargs
+	private static <T> List<T> union(Set<T>... sets) {
+		List<T> result=new ArrayList<>();
+		for(Set<T> s : sets)
+			result.addAll(s);
+		return result;
 	}
 
 	/**
@@ -131,10 +236,8 @@ public class SolverSB implements ISolver {
 		long startTime=System.currentTimeMillis();
 		Map<Component,Server> oldAlpha=bookKeeper.getAlpha(); //we save it so that we can compute the number of migrations in the end
 		Result result=new Result();
-		List<Server> servers=new ArrayList<>(freelyUsableServers);
-		servers.addAll(unpreferredServers);
-		List<Component> movableComponents=new ArrayList<>(fullyControlledComponents);
-		movableComponents.addAll(obtainedComponents);
+		List<Server> servers=union(freelyUsableServers,unpreferredServers);
+		List<Component> movableComponents=union(fullyControlledComponents,obtainedComponents);
 		List<Component> componentsToPlace=new ArrayList<>(newComponents);
 		Collections.sort(componentsToPlace,new Comparator<Component>() { //we sort the components to be placed in increasing order of their size
 			@Override
@@ -142,6 +245,7 @@ public class SolverSB implements ISolver {
 				return Double.compare(lhs.getCpuReq()*lhs.getRamReq(),rhs.getCpuReq()*rhs.getRamReq());
 			}
 		});
+		int beginning=actionStack.getSize();
 		while(componentsToPlace.size()>0) {
 			Component newComp=componentsToPlace.remove(componentsToPlace.size()-1); //we pick the biggest of the components that still need to be placed
 			Collections.sort(servers,new Comparator<Server>() { //we sort the servers such that the best servers are at the beginning. This has to be repeated each time, since the free capacity of servers may change
@@ -157,8 +261,7 @@ public class SolverSB implements ISolver {
 			//try to place the component on one of the servers
 			boolean succeeded=false;
 			for(Server server : servers) {
-				if(isPlaceable(newComp,server,ourColony)) {
-					place(newComp,server);
+				if(tryToPlace(newComp,server,ourColony)) {
 					succeeded=true;
 					break;
 				}
@@ -167,20 +270,19 @@ public class SolverSB implements ISolver {
 				for(Component oldComp : movableComponents) { //for each movable component, we try to find a new host
 					Server oldServer=bookKeeper.getHost(oldComp);
 					Server migrationTarget=null;
+					int beforeMigration=actionStack.getSize();
 					for(Server newServer : servers) {
-						if(newServer!=oldServer && isPlaceable(oldComp,newServer,ourColony)) {
+						if(newServer!=oldServer && tryToMigrate(oldComp,newServer,ourColony)) {
 							migrationTarget=newServer;
 							break;
 						}
 					}
-					if(migrationTarget!=null) { //if we managed to find a new host for this existing component, we move it there provisionally
-						place(oldComp,migrationTarget);
-						if(isPlaceable(newComp,oldServer,ourColony)) { //if this way the relieved server can host the new component, then all is good
-							place(newComp,oldServer);
+					if(migrationTarget!=null) { //if we managed to migrate this existing component
+						if(tryToPlace(newComp,oldServer,ourColony)) { //if this way the relieved server can host the new component, then all is good
 							succeeded=true;
 							break;
 						} else { //if not, then we move back the provisionally moved component to avoid a useless migration
-							place(oldComp,oldServer);
+							actionStack.rollback(beforeMigration);
 						}
 					}
 				}
@@ -189,8 +291,7 @@ public class SolverSB implements ISolver {
 				movableComponents.add(newComp);
 				result.success=1;
 			} else { //if not, then we un-place the whole application
-				for(Component c : newComponents)
-					unPlace(c); //has no effect if c is not placed yet
+				actionStack.rollback(beginning);
 				result.success=0;
 				break;
 			}
