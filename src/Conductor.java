@@ -44,7 +44,11 @@ public class Conductor {
 		case independent:
 			freelyUsableServers=new HashSet<>(colony.getServers());
 			unpreferredServers=new HashSet<>();
-			fullyControlledComponents=bookKeeper.getComponents(colony);
+			fullyControlledComponents=new HashSet<>();
+			for(Component c : bookKeeper.getComponents(colony)) {
+				if(c.getTargetColony()==colony) //need this to ensure we do not take components targeted to other colonies that reside in the shared cloud
+					fullyControlledComponents.add(c);
+			}
 			obtainedComponents=new HashSet<>();
 			readOnlyComponents=new HashSet<>();
 			break;
@@ -93,6 +97,14 @@ public class Conductor {
 			readOnlyComponents=new HashSet<>();
 			break;
 		}
+		/*
+		System.out.println("freelyUsableServers: "+freelyUsableServers);
+		System.out.println("unpreferredServers: "+unpreferredServers);
+		System.out.println("newComponents: "+newComponents);
+		System.out.println("fullyControlledComponents: "+fullyControlledComponents);
+		System.out.println("obtainedComponents: "+obtainedComponents);
+		System.out.println("readOnlyComponents: "+readOnlyComponents);
+		*/
 		return solver.optimize(freelyUsableServers,unpreferredServers,newComponents,fullyControlledComponents,obtainedComponents,readOnlyComponents,colony);
 	}
 }
