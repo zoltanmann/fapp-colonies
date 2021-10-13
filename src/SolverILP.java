@@ -104,6 +104,29 @@ public class SolverILP implements ISolver {
 		Set<Connector> allConnectors=new HashSet<>();
 		for(Component comp : ourComponents)
 			allConnectors.addAll(comp.getConnectors());
+		//sanity check
+		for(Connector conn : allConnectors) {
+			if(conn.getV1() instanceof Component && !allComponents.contains(conn.getV1())) {
+				System.out.println("Problem with connector "+conn);
+				System.out.println("freelyUsableServers: "+freelyUsableServers);
+				System.out.println("unpreferredServers: "+unpreferredServers);
+				System.out.println("newComponents: "+newComponents);
+				System.out.println("fullyControlledComponents: "+fullyControlledComponents);
+				System.out.println("obtainedComponents: "+obtainedComponents);
+				System.out.println("readOnlyComponents: "+readOnlyComponents);
+				System.exit(-1);
+			}
+			if(conn.getV2() instanceof Component && !allComponents.contains(conn.getV2())) {
+				System.out.println("Problem with connector "+conn);
+				System.out.println("freelyUsableServers: "+freelyUsableServers);
+				System.out.println("unpreferredServers: "+unpreferredServers);
+				System.out.println("newComponents: "+newComponents);
+				System.out.println("fullyControlledComponents: "+fullyControlledComponents);
+				System.out.println("obtainedComponents: "+obtainedComponents);
+				System.out.println("readOnlyComponents: "+readOnlyComponents);
+				System.exit(-1);
+			}
+		}
 		Set<EndDevice> endDevices=new HashSet<>();
 		for(Component comp : allComponents) {
 			for(Connector conn : comp.getConnectors()) {
@@ -194,6 +217,7 @@ public class SolverILP implements ISolver {
 						}
 						expr.addTerm(-1,x1);
 						expr.addTerm(-1,x2);
+						System.out.println("conn: "+conn+", n1: "+n1+", n2: "+n2+", x1: "+x1+", x2: "+x2);
 						model.addConstr(expr,GRB.GREATER_EQUAL,-1,"Consistent_"+conn.getId()+"_"+n1.getId()+"_"+n2.getId());
 					}
 				}
@@ -230,8 +254,10 @@ public class SolverILP implements ISolver {
 			for(Connector c : allConnectors) {
 				Path p=bookKeeper.getPath(c);
 				if(p!=null) {
-					for(Link l : p.getLinks())
-						availableBw.put(l,availableBw.get(l)+c.getBwReq());
+					for(Link l : p.getLinks()) {
+						if(allLinks.contains(l))
+							availableBw.put(l,availableBw.get(l)+c.getBwReq());
+					}
 				}
 			}
 			for(Link l : allLinks) {
@@ -281,6 +307,38 @@ public class SolverILP implements ISolver {
 						GRBLinExpr expr = new GRBLinExpr();
 						expr.addTerm(1, xVar);
 						model.addConstr(expr,GRB.EQUAL,0,"NoForward_"+c+"_"+s);
+					}
+				}
+			}
+			//If there is a connector c1-c2, and k' and k'' are colonies different from each other and from ours, then it is forbidden to place c1 on k' and c2 on k''
+			for(Connector conn : allConnectors) {
+				ISwNode sn1=conn.getV1();
+				ISwNode sn2=conn.getV2();
+				if(!ourComponents.contains(sn1) || !ourComponents.contains(sn2))
+					continue;
+				if(sn1 instanceof Component && sn2 instanceof Component) {
+					for(Colony k1 : ourColony.getNeighbors()) {
+						for(Colony k2 : ourColony.getNeighbors()) {
+							if(k1==k2)
+								continue;
+							for(Server s1 : k1.getServers()) {
+								//if(freelyUsableServers.contains(s1))//case of the cloud
+								if(!unpreferredServers.contains(s1))//covers both the case of the cloud and non-communicating colonies
+									continue;
+								GRBVar x1=x.get(sn1,s1);
+								for(Server s2 : k2.getServers()) {
+									//if(freelyUsableServers.contains(s2))//case of the cloud
+									if(!unpreferredServers.contains(s2))//covers both the case of the cloud and non-communicating colonies
+										continue;
+									GRBVar x2=x.get(sn2,s2);
+									GRBLinExpr expr = new GRBLinExpr();
+									expr.addTerm(1,x1);
+									expr.addTerm(1,x2);
+									System.out.println("NoCross_"+sn1+"_"+sn2+"_"+s1+"_"+s2);
+									model.addConstr(expr,GRB.LESS_EQUAL,1,"NoCross_"+sn1+"_"+sn2+"_"+s1+"_"+s2);
+								}
+							}
+						}
 					}
 				}
 			}

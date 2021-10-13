@@ -55,8 +55,12 @@ public class Conductor {
 		case communicating:
 			freelyUsableServers=new HashSet<>(colony.getServers());
 			unpreferredServers=new HashSet<>();
-			for(Colony colony2 : colony.getNeighbors())
-				unpreferredServers.addAll(colony2.getServers());
+			for(Colony colony2 : colony.getNeighbors()) {
+				for(Server s : colony2.getServers()) {
+					if(!freelyUsableServers.contains(s)) //important so that the cloud is not added as an unpreferred server
+						unpreferredServers.add(s);
+				}
+			}
 			fullyControlledComponents=new HashSet<>();
 			obtainedComponents=new HashSet<>();
 			readOnlyComponents=new HashSet<>();
