@@ -104,26 +104,19 @@ public class SolverILP implements ISolver {
 		Set<Connector> allConnectors=new HashSet<>();
 		for(Component comp : ourComponents)
 			allConnectors.addAll(comp.getConnectors());
-		//sanity check
+		//sanity check (for debugging purposes)
 		for(Connector conn : allConnectors) {
-			if(conn.getV1() instanceof Component && !allComponents.contains(conn.getV1())) {
-				System.out.println("Problem with connector "+conn);
+			if((conn.getV1() instanceof Component && !allComponents.contains(conn.getV1()))
+					|| (conn.getV2() instanceof Component && !allComponents.contains(conn.getV2()))) {
 				System.out.println("freelyUsableServers: "+freelyUsableServers);
 				System.out.println("unpreferredServers: "+unpreferredServers);
 				System.out.println("newComponents: "+newComponents);
 				System.out.println("fullyControlledComponents: "+fullyControlledComponents);
 				System.out.println("obtainedComponents: "+obtainedComponents);
 				System.out.println("readOnlyComponents: "+readOnlyComponents);
-				System.exit(-1);
-			}
-			if(conn.getV2() instanceof Component && !allComponents.contains(conn.getV2())) {
-				System.out.println("Problem with connector "+conn);
-				System.out.println("freelyUsableServers: "+freelyUsableServers);
-				System.out.println("unpreferredServers: "+unpreferredServers);
-				System.out.println("newComponents: "+newComponents);
-				System.out.println("fullyControlledComponents: "+fullyControlledComponents);
-				System.out.println("obtainedComponents: "+obtainedComponents);
-				System.out.println("readOnlyComponents: "+readOnlyComponents);
+				System.out.println("PROBLEM with connector "+conn);
+				System.out.println("Component 1: "+conn.getV1()+" on "+bookKeeper.getHost((Component)conn.getV1()));
+				System.out.println("Component 2: "+conn.getV2()+" on "+bookKeeper.getHost((Component)conn.getV2()));
 				System.exit(-1);
 			}
 		}
@@ -217,7 +210,7 @@ public class SolverILP implements ISolver {
 						}
 						expr.addTerm(-1,x1);
 						expr.addTerm(-1,x2);
-						System.out.println("conn: "+conn+", n1: "+n1+", n2: "+n2+", x1: "+x1+", x2: "+x2);
+						//System.out.println("conn: "+conn+", n1: "+n1+", n2: "+n2+", x1: "+x1+", x2: "+x2);//just for debugging purposes
 						model.addConstr(expr,GRB.GREATER_EQUAL,-1,"Consistent_"+conn.getId()+"_"+n1.getId()+"_"+n2.getId());
 					}
 				}
@@ -334,7 +327,7 @@ public class SolverILP implements ISolver {
 									GRBLinExpr expr = new GRBLinExpr();
 									expr.addTerm(1,x1);
 									expr.addTerm(1,x2);
-									System.out.println("NoCross_"+sn1+"_"+sn2+"_"+s1+"_"+s2);
+									//System.out.println("NoCross_"+sn1+"_"+sn2+"_"+s1+"_"+s2);
 									model.addConstr(expr,GRB.LESS_EQUAL,1,"NoCross_"+sn1+"_"+sn2+"_"+s1+"_"+s2);
 								}
 							}

@@ -67,7 +67,7 @@ public class Conductor {
 			for(Component c : bookKeeper.getComponents(colony)) {
 				if(c.getTargetColony()==colony)
 					fullyControlledComponents.add(c);
-				else
+				else if(colony.getNeighbors().contains(c.getTargetColony()))
 					obtainedComponents.add(c);
 			}
 			for(Colony neiCol : colony.getNeighbors()) {
