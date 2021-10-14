@@ -11,15 +11,15 @@ public class Main {
 	enum SolverType {SolverSB, SolverILP}
 
 	/** Nr. of fog nodes per region */
-	private static int nrFogNodesPerRegion=5;
+	private static int nrFogNodesPerRegion=10;
 	/** Nr. of regions */
 	private static int nrRegions=5;
 	/** Nr. of applications per region */
-	private static int nrAppsPerRegion=3;
+	private static int nrAppsPerRegion=5;
 	/** Nr. of fog components per application */
-	private static int appSize=3;
+	private static int appSize=5;
 	/** Nr. of end devices per region */
-	private static int nrEndDevicesPerRegion=5;
+	private static int nrEndDevicesPerRegion=10;
 	/** Nr. of additional links among servers after creating an initial tree architecture. This number of links is tried to be created; the actual number of created links may be less */
 	private static int nrAdditionalLinks=nrFogNodesPerRegion*2;
 	/** Nr. of servers connected to an end device */

@@ -1,6 +1,7 @@
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -276,10 +277,34 @@ public class SolverSB implements ISolver {
 		List<Server> servers=union(freelyUsableServers,unpreferredServers);
 		List<Component> movableComponents=union(fullyControlledComponents,obtainedComponents);
 		List<Component> componentsToPlace=new ArrayList<>(newComponents);
+		Map<Component,Integer> distanceFromEndDevices=new HashMap<>();
+		int level=1;
+		while(distanceFromEndDevices.size()<newComponents.size()) {
+			for(Component c : newComponents) {
+				if(distanceFromEndDevices.containsKey(c))
+					continue;
+				for(Connector conn : c.getConnectors()) {
+					ISwNode otherSwNode=conn.getOtherVertex(c);
+					if(otherSwNode instanceof EndDevice || distanceFromEndDevices.containsKey(otherSwNode)) {
+						distanceFromEndDevices.put(c,level);
+						break;
+					}
+				}
+			}
+			level++;
+		}
+		/*
 		Collections.sort(componentsToPlace,new Comparator<Component>() { //we sort the components to be placed in increasing order of their size
 			@Override
 			public int compare(Component lhs,Component rhs) {
 				return Double.compare(lhs.getCpuReq()*lhs.getRamReq(),rhs.getCpuReq()*rhs.getRamReq());
+			}
+		});
+		*/
+		Collections.sort(componentsToPlace,new Comparator<Component>() { //we sort the components to be placed in increasing order of their distance from end devices
+			@Override
+			public int compare(Component lhs,Component rhs) {
+				return Integer.compare(distanceFromEndDevices.get(lhs),distanceFromEndDevices.get(rhs));
 			}
 		});
 		int beginning=actionStack.getSize();
