@@ -28,8 +28,6 @@ public class Main {
 	private static int nrNodesToShareWithNeighbor=1;
 	/** Random generator that can be used by any class in the program */
 	public static Random random;
-	/** The cloud, which is contained in each colony */
-	private static Server cloud;
 	/** The complete infrastructure */
 	private static Infrastructure infra;
 	/** Set of all fog colonies */
@@ -42,8 +40,6 @@ public class Main {
 	 */
 	private static void createInfra() {
 		infra=new Infrastructure();
-		cloud=new Server("cloud", 1000000, 1000000);
-		infra.addServer(cloud);
 		colonies=new Colony[nrRegions];
 		for(int i=0;i<nrRegions;i++) {
 			colonies[i]=new Colony();
@@ -64,11 +60,14 @@ public class Main {
 	 * cloud) with the given index.
 	 */
 	private static void createRegion(int index) {
+		Server cloud=new Server("cloud"+index, 1000000, 1000000, true);
+		infra.addServer(cloud);
+		colonies[index].addServer(cloud);
 		for(int i=0;i<nrFogNodesPerRegion;i++) {
 			String serverId="s"+index+"."+i;
 			double cpuCap=random.nextDouble()*9+1;
 			double ramCap=random.nextDouble()*9+1;
-			Server s=new Server(serverId,cpuCap,ramCap);
+			Server s=new Server(serverId,cpuCap,ramCap,false);
 			if(i>0) {
 				Server s0=colonies[index].getRandomServer();
 				double bw=random.nextDouble()*4+1;
@@ -116,7 +115,7 @@ public class Main {
 		do {
 			s1=region1.getRandomServer();
 			s2=region2.getRandomServer();
-		} while(s1==s2 || s1==cloud || s2==cloud);
+		} while(s1==s2 || s1.isCloud() || s2.isCloud());
 		double bw=random.nextDouble()*4+1;
 		double latency=random.nextDouble()*4+1;
 		new Link(bw,latency,s1,s2);

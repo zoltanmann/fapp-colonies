@@ -131,7 +131,7 @@ public class Colony {
 		Set<Server> result=new HashSet<>();
 		List<Server> potentialNodesToShare=new ArrayList<>();
 		for(Server s : servers) {
-			if(!sharedNodes.contains(s) && !s.getId().equals("cloud"))
+			if(!sharedNodes.contains(s) && !s.isCloud())
 				potentialNodesToShare.add(s);
 		}
 		for(int i=0;i<k;i++) {

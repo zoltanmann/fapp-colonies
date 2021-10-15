@@ -2,17 +2,18 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 /**
  * Search-based solver. Solves the optimization problem by trying to place new
- * components one by one in decreasing order of their size. If this is not successful,
- * the algorithm tries to migrate some already placed components to see if this way
- * more components can be placed. Note that the solver is stateless (the state is
- * maintained by the BookKeeper), i.e., the same solver object can be applied to 
- * different problem instances.
+ * components one by one. If this is not successful, the algorithm tries to 
+ * migrate some already placed components to see if this way more components can 
+ * be placed. Note that the solver is stateless (the state is maintained by the 
+ * BookKeeper), i.e., the same solver object can be applied to different problem 
+ * instances.
  */
 public class SolverSB implements ISolver {
 	/** Reference to the bookKeeper */
@@ -31,7 +32,7 @@ public class SolverSB implements ISolver {
 		/** Server that should act as host */
 		private Server s;
 
-		/** Construct new action of placeing component c on server s */
+		/** Construct new action of placing component c on server s */
 		public PlaceAction(Component c,Server s) {
 			this.c=c;
 			this.s=s;
@@ -174,8 +175,19 @@ public class SolverSB implements ISolver {
 	 * Tries to route the given connector between the given infrastructure nodes.
 	 * Returns either a valid path or null if no valid path could not be found.
 	 */
-	private Path findRoute(Connector conn, IHwNode n1, IHwNode n2) {
+	private Path findRoute(Connector conn,IHwNode n1,IHwNode n2,Set<IHwNode> allHwNodes) {
 		for(Path p : bookKeeper.getInfra().getPaths(n1,n2)) {
+			if(p.getLatency() > conn.getMaxLatency())
+				continue;
+			boolean relevant=true;
+			for(IHwNode n : p.getNodes()) {
+				if(!allHwNodes.contains(n)) {
+					relevant=false;
+					break;
+				}
+			}
+			if(!relevant)
+				continue;
 			boolean enoughBw=true;
 			for(Link l : p.getLinks()) {
 				if(bookKeeper.getFreeBandwidth(l) < conn.getBwReq()) {
@@ -183,7 +195,7 @@ public class SolverSB implements ISolver {
 					break;
 				}
 			}
-			if(enoughBw && p.getLatency() <= conn.getMaxLatency())
+			if(enoughBw)
 				return p;
 		}
 		return null;
@@ -191,15 +203,36 @@ public class SolverSB implements ISolver {
 
 	/**
 	 * Try to place the given component on the given server AND to route each connector that is 
-	 * incident to the given component and goes to an already placed component. If successful, return
-	 * true. Otherwise, undo the changes and return false.
+	 * incident to the given component and goes to an already placed component or to an end device. 
+	 * If successful, return true. Otherwise, undo the changes and return false.
 	 */
-	private boolean tryToPlace(Component c,Server s,Colony ourColony) {
+	private boolean tryToPlace(Component c,Server s,Colony ourColony,Set<IHwNode> allHwNodes) {
 		boolean success=true;
 		//A component that colony k received from colony k' may only be placed in k or k' 
 		Colony targetColony=c.getTargetColony();
 		if(targetColony!=ourColony && !ourColony.getServers().contains(s) && !targetColony.getServers().contains(s))
 			return false;
+		//If a neighbor of c is in colony k', then c must not be placed in a colony k'' different from both k' and our colony k
+		if(!ourColony.getServers().contains(s)) {
+			for(Connector conn : c.getConnectors()) {
+				ISwNode otherSwNode=conn.getOtherVertex(c);
+				IHwNode otherHwNode;
+				if(otherSwNode.isEndDevice())
+					otherHwNode=(EndDevice)otherSwNode;
+				else
+					otherHwNode=bookKeeper.getHost((Component)otherSwNode);
+				if(otherHwNode==null)
+					continue;
+				if(!ourColony.getServers().contains(otherHwNode) && !ourColony.getEndDevices().contains(otherHwNode)) {
+					for(Colony neiCol : ourColony.getNeighbors()) {
+						if(neiCol.getServers().contains(otherHwNode) || neiCol.getEndDevices().contains(otherHwNode)) {
+							if(!neiCol.getServers().contains(s))
+								return false;
+						}
+					}
+				}
+			}
+		}
 		if(bookKeeper.getFreeCpuCap(s) < c.getCpuReq())
 			return false;
 		if(bookKeeper.getFreeRamCap(s) < c.getRamReq())
@@ -215,7 +248,7 @@ public class SolverSB implements ISolver {
 				otherHwNode=bookKeeper.getHost((Component)otherVertex);
 			if(otherHwNode==null) //other component has not been placed yet
 				continue;
-			Path p=findRoute(conn,s,otherHwNode);
+			Path p=findRoute(conn,s,otherHwNode,allHwNodes);
 			if(p!=null)
 				actionStack.perform(new RouteAction(conn,p));
 			else {
@@ -230,10 +263,10 @@ public class SolverSB implements ISolver {
 
 	/**
 	 * Try to migrate the given component on the given server AND to re-route each connector that is 
-	 * incident to the given component and goes to an already placed component. If successful, return
-	 * true. Otherwise, undo the changes and return false.
+	 * incident to the given component and goes to an already placed component or to an end device. 
+	 * If successful, return true. Otherwise, undo the changes and return false.
 	 */
-	private boolean tryToMigrate(Component c,Server newServer,Colony ourColony) {
+	private boolean tryToMigrate(Component c,Server newServer,Colony ourColony,Set<IHwNode> allHwNodes) {
 		int startSize=actionStack.getSize();
 		Server oldServer=bookKeeper.getHost(c);
 		actionStack.perform(new UnPlaceAction(c,oldServer));
@@ -241,7 +274,7 @@ public class SolverSB implements ISolver {
 			if(bookKeeper.getPath(conn)!=null)
 				actionStack.perform(new UnRouteAction(conn,bookKeeper.getPath(conn)));
 		}
-		boolean success=tryToPlace(c,newServer,ourColony);
+		boolean success=tryToPlace(c,newServer,ourColony,allHwNodes);
 		if(!success)
 			actionStack.rollback(startSize);
 		return success;
@@ -249,7 +282,7 @@ public class SolverSB implements ISolver {
 
 	/**
 	 * Helper method to create the union of an arbitrary number of sets of the same type of objects in 
-	 * the form a single list.
+	 * the form of a single list.
 	 */
 	@SafeVarargs
 	private static <T> List<T> union(Set<T>... sets) {
@@ -277,21 +310,36 @@ public class SolverSB implements ISolver {
 		List<Server> servers=union(freelyUsableServers,unpreferredServers);
 		List<Component> movableComponents=union(fullyControlledComponents,obtainedComponents);
 		List<Component> componentsToPlace=new ArrayList<>(newComponents);
+		List<Component> allComponents=union(newComponents,fullyControlledComponents,obtainedComponents,readOnlyComponents);
+		Set<EndDevice> endDevices=new HashSet<>();
+		for(Component comp : allComponents) {
+			for(Connector conn : comp.getConnectors()) {
+				ISwNode other=conn.getOtherVertex(comp);
+				if(other.isEndDevice())
+					endDevices.add((EndDevice)other);
+			}
+		}
+		Set<IHwNode> allHwNodes=new HashSet<>(servers);
+		allHwNodes.addAll(endDevices);
+		//compute for each new component its distance from the end devices in the application graph
 		Map<Component,Integer> distanceFromEndDevices=new HashMap<>();
-		int level=1;
+		int level=0;
 		while(distanceFromEndDevices.size()<newComponents.size()) {
+			Set<Component> nextLevelComps=new HashSet<>();
 			for(Component c : newComponents) {
 				if(distanceFromEndDevices.containsKey(c))
 					continue;
 				for(Connector conn : c.getConnectors()) {
 					ISwNode otherSwNode=conn.getOtherVertex(c);
 					if(otherSwNode instanceof EndDevice || distanceFromEndDevices.containsKey(otherSwNode)) {
-						distanceFromEndDevices.put(c,level);
+						nextLevelComps.add(c);
 						break;
 					}
 				}
 			}
 			level++;
+			for(Component c : nextLevelComps)
+				distanceFromEndDevices.put(c,level);
 		}
 		/*
 		Collections.sort(componentsToPlace,new Comparator<Component>() { //we sort the components to be placed in increasing order of their size
@@ -301,15 +349,15 @@ public class SolverSB implements ISolver {
 			}
 		});
 		*/
-		Collections.sort(componentsToPlace,new Comparator<Component>() { //we sort the components to be placed in increasing order of their distance from end devices
+		Collections.sort(componentsToPlace,new Comparator<Component>() { //we sort the components to be placed in decreasing order of their distance from end devices
 			@Override
 			public int compare(Component lhs,Component rhs) {
-				return Integer.compare(distanceFromEndDevices.get(lhs),distanceFromEndDevices.get(rhs));
+				return Integer.compare(distanceFromEndDevices.get(rhs),distanceFromEndDevices.get(lhs));
 			}
 		});
 		int beginning=actionStack.getSize();
 		while(componentsToPlace.size()>0) {
-			Component newComp=componentsToPlace.remove(componentsToPlace.size()-1); //we pick the biggest of the components that still need to be placed
+			Component newComp=componentsToPlace.remove(componentsToPlace.size()-1); //we pick the component that is nearest to the end devices
 			Collections.sort(servers,new Comparator<Server>() { //we sort the servers such that the best servers are at the beginning. This has to be repeated each time, since the free capacity of servers may change
 				@Override
 				public int compare(Server lhs,Server rhs) {
@@ -323,7 +371,7 @@ public class SolverSB implements ISolver {
 			//try to place the component on one of the servers
 			boolean succeeded=false;
 			for(Server server : servers) {
-				if(tryToPlace(newComp,server,ourColony)) {
+				if(tryToPlace(newComp,server,ourColony,allHwNodes)) {
 					succeeded=true;
 					break;
 				}
@@ -334,13 +382,13 @@ public class SolverSB implements ISolver {
 					Server migrationTarget=null;
 					int beforeMigration=actionStack.getSize();
 					for(Server newServer : servers) {
-						if(newServer!=oldServer && tryToMigrate(oldComp,newServer,ourColony)) {
+						if(newServer!=oldServer && tryToMigrate(oldComp,newServer,ourColony,allHwNodes)) {
 							migrationTarget=newServer;
 							break;
 						}
 					}
 					if(migrationTarget!=null) { //if we managed to migrate this existing component
-						if(tryToPlace(newComp,oldServer,ourColony)) { //if this way the relieved server can host the new component, then all is good
+						if(tryToPlace(newComp,oldServer,ourColony,allHwNodes)) { //if this way the relieved server can host the new component, then all is good
 							succeeded=true;
 							break;
 						} else { //if not, then we move back the provisionally moved component to avoid a useless migration

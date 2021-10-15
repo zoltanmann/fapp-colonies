@@ -13,14 +13,17 @@ public class Server implements IHwNode {
 	private double ramCap;
 	/** Set of links incident to this server */
 	private Set<Link> links;
+	/** Whether this is the cloud */
+	private boolean bCloud;
 
 	/**
 	 * Constructs a server with the given attributes and an empty set of incident links.
 	 */
-	public Server(String id, double cpuCap, double ramCap) {
+	public Server(String id, double cpuCap, double ramCap, boolean bCloud) {
 		this.id=id;
 		this.cpuCap = cpuCap;
 		this.ramCap = ramCap;
+		this.bCloud=bCloud;
 		links=new HashSet<>();
 	}
 
@@ -71,5 +74,9 @@ public class Server implements IHwNode {
 	 */
 	public String toString() {
 		return id+"("+cpuCap+","+ramCap+")";
+	}
+
+	public boolean isCloud() {
+		return bCloud;
 	}
 }
