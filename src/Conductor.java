@@ -109,6 +109,6 @@ public class Conductor {
 		System.out.println("obtainedComponents: "+obtainedComponents);
 		System.out.println("readOnlyComponents: "+readOnlyComponents);
 		*/
-		return solver.optimize(freelyUsableServers,unpreferredServers,newComponents,fullyControlledComponents,obtainedComponents,readOnlyComponents,colony);
+		return solver.optimize(freelyUsableServers,unpreferredServers,newComponents,fullyControlledComponents,obtainedComponents,readOnlyComponents,colony,mode);
 	}
 }

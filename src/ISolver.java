@@ -12,6 +12,7 @@ public interface ISolver {
 			Set<Component> fullyControlledComponents, //already placed components whose placement is in our control
 			Set<Component> obtainedComponents, //already placed components that we got from another colony and hence must not forward it to a third colony
 			Set<Component> readOnlyComponents, //already placed components in a neighboring colony that have a connector to a component in our colony
-			Colony ourColony);
+			Colony ourColony,
+			Conductor.ModeType mode);
 
 }

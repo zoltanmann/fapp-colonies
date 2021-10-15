@@ -206,28 +206,30 @@ public class SolverSB implements ISolver {
 	 * incident to the given component and goes to an already placed component or to an end device. 
 	 * If successful, return true. Otherwise, undo the changes and return false.
 	 */
-	private boolean tryToPlace(Component c,Server s,Colony ourColony,Set<IHwNode> allHwNodes) {
+	private boolean tryToPlace(Component c,Server s,Colony ourColony,Set<IHwNode> allHwNodes,Conductor.ModeType mode) {
 		boolean success=true;
-		//A component that colony k received from colony k' may only be placed in k or k' 
-		Colony targetColony=c.getTargetColony();
-		if(targetColony!=ourColony && !ourColony.getServers().contains(s) && !targetColony.getServers().contains(s))
-			return false;
-		//If a neighbor of c is in colony k', then c must not be placed in a colony k'' different from both k' and our colony k
-		if(!ourColony.getServers().contains(s)) {
-			for(Connector conn : c.getConnectors()) {
-				ISwNode otherSwNode=conn.getOtherVertex(c);
-				IHwNode otherHwNode;
-				if(otherSwNode.isEndDevice())
-					otherHwNode=(EndDevice)otherSwNode;
-				else
-					otherHwNode=bookKeeper.getHost((Component)otherSwNode);
-				if(otherHwNode==null)
-					continue;
-				if(!ourColony.getServers().contains(otherHwNode) && !ourColony.getEndDevices().contains(otherHwNode)) {
-					for(Colony neiCol : ourColony.getNeighbors()) {
-						if(neiCol.getServers().contains(otherHwNode) || neiCol.getEndDevices().contains(otherHwNode)) {
-							if(!neiCol.getServers().contains(s))
-								return false;
+		if(mode==Conductor.ModeType.communicating) {
+			//A component that colony k received from colony k' may only be placed in k or k' 
+			Colony targetColony=c.getTargetColony();
+			if(targetColony!=ourColony && !ourColony.getServers().contains(s) && !targetColony.getServers().contains(s))
+				return false;
+			//If a neighbor of c is in colony k', then c must not be placed in a colony k'' different from both k' and our colony k
+			if(!ourColony.getServers().contains(s)) {
+				for(Connector conn : c.getConnectors()) {
+					ISwNode otherSwNode=conn.getOtherVertex(c);
+					IHwNode otherHwNode;
+					if(otherSwNode.isEndDevice())
+						otherHwNode=(EndDevice)otherSwNode;
+					else
+						otherHwNode=bookKeeper.getHost((Component)otherSwNode);
+					if(otherHwNode==null)
+						continue;
+					if(!ourColony.getServers().contains(otherHwNode) && !ourColony.getEndDevices().contains(otherHwNode)) {
+						for(Colony neiCol : ourColony.getNeighbors()) {
+							if(neiCol.getServers().contains(otherHwNode) || neiCol.getEndDevices().contains(otherHwNode)) {
+								if(!neiCol.getServers().contains(s))
+									return false;
+							}
 						}
 					}
 				}
@@ -266,7 +268,7 @@ public class SolverSB implements ISolver {
 	 * incident to the given component and goes to an already placed component or to an end device. 
 	 * If successful, return true. Otherwise, undo the changes and return false.
 	 */
-	private boolean tryToMigrate(Component c,Server newServer,Colony ourColony,Set<IHwNode> allHwNodes) {
+	private boolean tryToMigrate(Component c,Server newServer,Colony ourColony,Set<IHwNode> allHwNodes,Conductor.ModeType mode) {
 		int startSize=actionStack.getSize();
 		Server oldServer=bookKeeper.getHost(c);
 		actionStack.perform(new UnPlaceAction(c,oldServer));
@@ -274,7 +276,7 @@ public class SolverSB implements ISolver {
 			if(bookKeeper.getPath(conn)!=null)
 				actionStack.perform(new UnRouteAction(conn,bookKeeper.getPath(conn)));
 		}
-		boolean success=tryToPlace(c,newServer,ourColony,allHwNodes);
+		boolean success=tryToPlace(c,newServer,ourColony,allHwNodes,mode);
 		if(!success)
 			actionStack.rollback(startSize);
 		return success;
@@ -303,7 +305,8 @@ public class SolverSB implements ISolver {
 			Set<Component> fullyControlledComponents,
 			Set<Component> obtainedComponents,
 			Set<Component> readOnlyComponents,
-			Colony ourColony) {
+			Colony ourColony,
+			Conductor.ModeType mode) {
 		long startTime=System.currentTimeMillis();
 		Map<Component,Server> oldAlpha=bookKeeper.getAlpha(); //we save it so that we can compute the number of migrations in the end
 		Result result=new Result();
@@ -371,7 +374,7 @@ public class SolverSB implements ISolver {
 			//try to place the component on one of the servers
 			boolean succeeded=false;
 			for(Server server : servers) {
-				if(tryToPlace(newComp,server,ourColony,allHwNodes)) {
+				if(tryToPlace(newComp,server,ourColony,allHwNodes,mode)) {
 					succeeded=true;
 					break;
 				}
@@ -382,13 +385,13 @@ public class SolverSB implements ISolver {
 					Server migrationTarget=null;
 					int beforeMigration=actionStack.getSize();
 					for(Server newServer : servers) {
-						if(newServer!=oldServer && tryToMigrate(oldComp,newServer,ourColony,allHwNodes)) {
+						if(newServer!=oldServer && tryToMigrate(oldComp,newServer,ourColony,allHwNodes,mode)) {
 							migrationTarget=newServer;
 							break;
 						}
 					}
 					if(migrationTarget!=null) { //if we managed to migrate this existing component
-						if(tryToPlace(newComp,oldServer,ourColony,allHwNodes)) { //if this way the relieved server can host the new component, then all is good
+						if(tryToPlace(newComp,oldServer,ourColony,allHwNodes,mode)) { //if this way the relieved server can host the new component, then all is good
 							succeeded=true;
 							break;
 						} else { //if not, then we move back the provisionally moved component to avoid a useless migration

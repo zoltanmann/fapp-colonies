@@ -93,7 +93,8 @@ public class SolverILP implements ISolver {
 			Set<Component> fullyControlledComponents,
 			Set<Component> obtainedComponents,
 			Set<Component> readOnlyComponents,
-			Colony ourColony) {
+			Colony ourColony,
+			Conductor.ModeType mode) {
 		long startTime=System.currentTimeMillis();
 		Result result=new Result();
 		Infrastructure infra=bookKeeper.getInfra();
@@ -291,44 +292,46 @@ public class SolverILP implements ISolver {
 				expr.addTerm(1, xVar);
 				model.addConstr(expr,GRB.EQUAL,1,"NoMigr_"+c);
 			}
-			//A component that colony k received from colony k' may only be placed in k or k'
-			for(Component c : obtainedComponents) {
-				Colony targetColony=c.getTargetColony();
-				for(Server s : servers) {
-					if(!ourColony.getServers().contains(s) && !targetColony.getServers().contains(s)) {
-						GRBVar xVar=x.get(c, s);
-						GRBLinExpr expr = new GRBLinExpr();
-						expr.addTerm(1, xVar);
-						model.addConstr(expr,GRB.EQUAL,0,"NoForward_"+c+"_"+s);
+			if(mode==Conductor.ModeType.communicating) {
+				//A component that colony k received from colony k' may only be placed in k or k'
+				for(Component c : obtainedComponents) {
+					Colony targetColony=c.getTargetColony();
+					for(Server s : servers) {
+						if(!ourColony.getServers().contains(s) && !targetColony.getServers().contains(s)) {
+							GRBVar xVar=x.get(c, s);
+							GRBLinExpr expr = new GRBLinExpr();
+							expr.addTerm(1, xVar);
+							model.addConstr(expr,GRB.EQUAL,0,"NoForward_"+c+"_"+s);
+						}
 					}
 				}
-			}
-			//If there is a connector c1-c2, and k' and k'' are colonies different from each other and from ours, then it is forbidden to place c1 on k' and c2 on k''
-			for(Connector conn : allConnectors) {
-				ISwNode sn1=conn.getV1();
-				ISwNode sn2=conn.getV2();
-				if(!ourComponents.contains(sn1) || !ourComponents.contains(sn2))
-					continue;
-				if(sn1 instanceof Component && sn2 instanceof Component) {
-					for(Colony k1 : ourColony.getNeighbors()) {
-						for(Colony k2 : ourColony.getNeighbors()) {
-							if(k1==k2)
-								continue;
-							for(Server s1 : k1.getServers()) {
-								//if(freelyUsableServers.contains(s1))//case of the cloud
-								if(!unpreferredServers.contains(s1))//covers both the case of the cloud and non-communicating colonies
+				//If there is a connector c1-c2, and k' and k'' are colonies different from each other and from ours, then it is forbidden to place c1 on k' and c2 on k''
+				for(Connector conn : allConnectors) {
+					ISwNode sn1=conn.getV1();
+					ISwNode sn2=conn.getV2();
+					if(!ourComponents.contains(sn1) || !ourComponents.contains(sn2))
+						continue;
+					if(sn1 instanceof Component && sn2 instanceof Component) {
+						for(Colony k1 : ourColony.getNeighbors()) {
+							for(Colony k2 : ourColony.getNeighbors()) {
+								if(k1==k2)
 									continue;
-								GRBVar x1=x.get(sn1,s1);
-								for(Server s2 : k2.getServers()) {
-									//if(freelyUsableServers.contains(s2))//case of the cloud
-									if(!unpreferredServers.contains(s2))//covers both the case of the cloud and non-communicating colonies
+								for(Server s1 : k1.getServers()) {
+									//if(freelyUsableServers.contains(s1))//case of the cloud
+									if(!unpreferredServers.contains(s1))//covers both the case of the cloud and non-communicating colonies
 										continue;
-									GRBVar x2=x.get(sn2,s2);
-									GRBLinExpr expr = new GRBLinExpr();
-									expr.addTerm(1,x1);
-									expr.addTerm(1,x2);
-									//System.out.println("NoCross_"+sn1+"_"+sn2+"_"+s1+"_"+s2);
-									model.addConstr(expr,GRB.LESS_EQUAL,1,"NoCross_"+sn1+"_"+sn2+"_"+s1+"_"+s2);
+									GRBVar x1=x.get(sn1,s1);
+									for(Server s2 : k2.getServers()) {
+										//if(freelyUsableServers.contains(s2))//case of the cloud
+										if(!unpreferredServers.contains(s2))//covers both the case of the cloud and non-communicating colonies
+											continue;
+										GRBVar x2=x.get(sn2,s2);
+										GRBLinExpr expr = new GRBLinExpr();
+										expr.addTerm(1,x1);
+										expr.addTerm(1,x2);
+										//System.out.println("NoCross_"+sn1+"_"+sn2+"_"+s1+"_"+s2);
+										model.addConstr(expr,GRB.LESS_EQUAL,1,"NoCross_"+sn1+"_"+sn2+"_"+s1+"_"+s2);
+									}
 								}
 							}
 						}
