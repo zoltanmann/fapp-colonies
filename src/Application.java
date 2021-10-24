@@ -44,7 +44,7 @@ public class Application {
 	 * Main.random is already initialized.
 	 */
 	public Component getRandomComponent() {
-		return components.get(Main.random.nextInt(components.size()));
+		return components.get(MainSynthetic.random.nextInt(components.size()));
 	}
 
 	/**

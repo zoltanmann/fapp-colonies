@@ -55,7 +55,7 @@ public class Colony {
 	 * one server, and Main.random has already been initialized.
 	 */
 	public Server getRandomServer() {
-		return servers.get(Main.random.nextInt(servers.size()));
+		return servers.get(MainSynthetic.random.nextInt(servers.size()));
 	}
 
 	/**
@@ -63,7 +63,7 @@ public class Colony {
 	 * least one end device, and Main.random has already been initialized.
 	 */
 	public EndDevice getRandomEndDevice() {
-		return endDevices.get(Main.random.nextInt(endDevices.size()));
+		return endDevices.get(MainSynthetic.random.nextInt(endDevices.size()));
 	}
 
 	/**
@@ -135,7 +135,7 @@ public class Colony {
 				potentialNodesToShare.add(s);
 		}
 		for(int i=0;i<k;i++) {
-			Server s=potentialNodesToShare.get(Main.random.nextInt(potentialNodesToShare.size()));
+			Server s=potentialNodesToShare.get(MainSynthetic.random.nextInt(potentialNodesToShare.size()));
 			potentialNodesToShare.remove(s);
 			result.add(s);
 		}

@@ -4,26 +4,34 @@ import java.util.Random;
 import java.util.Set;
 
 /**
- * Experiment driver class. Everything in this class is static, so that it does not
- * need to be instantiated, but can be used directly from the main() method.
+ * Experiment driver class based on real-world data from Djemai et al.: "A Discrete Particle Swarm 
+ * Optimization approach for Energy-efficient IoT services placement over Fog infrastructures".
+ * Everything in this class is static, so that it does not need to be instantiated, but can be used 
+ * directly from the main() method.
  */
-public class Main {
+public class MainReal {
 	enum SolverType {SolverSB, SolverILP}
 
 	/** Nr. of fog nodes per region */
-	private static int nrFogNodesPerRegion=10;
+	private static int nrL2FogNodesPerRegion=4;
 	/** Nr. of regions */
 	private static int nrRegions=5;
 	/** Nr. of applications per region */
 	private static int nrAppsPerRegion=5;
 	/** Nr. of fog components per application */
-	private static int appSize=5;
-	/** Nr. of end devices per region */
-	private static int nrEndDevicesPerRegion=10;
-	/** Nr. of additional links among servers after creating an initial tree architecture. This number of links is tried to be created; the actual number of created links may be less */
-	private static int nrAdditionalLinks=nrFogNodesPerRegion*2;
-	/** Nr. of servers connected to an end device */
-	private static int nrNeighborsOfEndDevice=2;
+	private static int appSize=3;
+	/** Nr. of end devices per fog node */
+	private static int nrEndDevicesPerFogNode=4;
+	private static double latencyBetweenColonies=100;
+	private static double bwBetweenColonies=100;
+	private static double compCpuMin=100;
+	private static double compCpuMax=500;
+	private static double compRamMin=100;
+	private static double compRamMax=500;
+	private static double connLatMin=25;
+	private static double connLatMax=50;
+	private static double connBwMin=0.01;
+	private static double connBwMax=0.6;
 	/** Nr. of fog nodes per colony that will be shared with each neighboring colony  */
 	private static int nrNodesToShareWithNeighbor=1;
 	/** Random generator that can be used by any class in the program */
@@ -60,48 +68,46 @@ public class Main {
 	 * cloud) with the given index.
 	 */
 	private static void createRegion(int index) {
-		Server cloud=new Server("cloud"+index, 1000000, 1000000, true);
+		Server cloud=new Server("cloud"+index, 120000, 64000, true);
 		infra.addServer(cloud);
 		colonies[index].addServer(cloud);
-		for(int i=0;i<nrFogNodesPerRegion;i++) {
+		Server proxyServer=new Server("proxy"+index, 60000, 8000, false);
+		infra.addServer(proxyServer);
+		colonies[index].addServer(proxyServer);
+		new Link(10000,100,cloud,proxyServer);
+		int endDeviceIndex=0;
+		for(int i=0;i<nrL2FogNodesPerRegion;i++) {
 			String serverId="s"+index+"."+i;
-			double cpuCap=random.nextDouble()*9+1;
-			double ramCap=random.nextDouble()*9+1;
-			Server s=new Server(serverId,cpuCap,ramCap,false);
-			if(i>0) {
-				Server s0=colonies[index].getRandomServer();
-				double bw=random.nextDouble()*4+1;
-				double latency=random.nextDouble()*4+1;
-				new Link(bw,latency,s0,s);
+			double cpuCap,ramCap;
+			int nodeType=i%4;
+			if(nodeType<2) {
+				cpuCap=6750;
+				ramCap=1000;
+			} else {
+				cpuCap=13500;
+				ramCap=2000;
 			}
+			Server s=new Server(serverId,cpuCap,ramCap,false);
 			infra.addServer(s);
 			colonies[index].addServer(s);
-		}
-		for(int i=0;i<nrAdditionalLinks;i++) {
-			Server s1=colonies[index].getRandomServer();
-			Server s2=colonies[index].getRandomServer();
-			if(s1==s2)
-				continue;
-			double bw=random.nextDouble()*4+1;
-			double latency=random.nextDouble()*4+1;
-			new Link(bw,latency,s1,s2);
-		}
-		for(int i=0;i<nrEndDevicesPerRegion;i++) {
-			EndDevice d=new EndDevice("d"+index+"."+i);
-			for(int j=0;j<nrNeighborsOfEndDevice;j++) { ///
-				Server s=colonies[index].getRandomServer();
-				double bw=random.nextDouble()*5+5;
-				double latency=random.nextDouble()*3;
-				new Link(bw,latency,s,d);
+			new Link(10000,2,s,proxyServer);
+			for(int j=0;j<nrEndDevicesPerFogNode;j++) {
+				EndDevice d=new EndDevice("d"+index+"."+endDeviceIndex);
+				endDeviceIndex++;
+				infra.addEndDevice(d);
+				colonies[index].addEndDevice(d);
+				double bw,latency;
+				if(i%4==0) latency=1000;
+				else if(i%4==1) latency=20;
+				else if(i%4==2) latency=50;
+				else latency=12;
+				if(j%4==0) bw=0.25;
+				else if(j%4==1) bw=1;
+				else if(j%4==2) bw=1000;
+				else bw=1000;
+				new Link(bw,latency,d,s);
 			}
-			infra.addEndDevice(d);
-			colonies[index].addEndDevice(d);
 		}
-		Server s=colonies[index].getRandomServer();
-		double bw=random.nextDouble()*4+1;
-		double latency=random.nextDouble()*40+40;///
-		new Link(bw,latency,s,cloud);
-		colonies[index].addServer(cloud);
 	}
 
 	/**
@@ -116,47 +122,43 @@ public class Main {
 			s1=region1.getRandomServer();
 			s2=region2.getRandomServer();
 		} while(s1==s2 || s1.isCloud() || s2.isCloud());
-		double bw=random.nextDouble()*4+1;
-		double latency=random.nextDouble()*4+1;
-		new Link(bw,latency,s1,s2);
+		new Link(bwBetweenColonies,latencyBetweenColonies,s1,s2);
+	}
+
+	private static void createConnector(ISwNode v1,ISwNode v2) {
+		double bwReq=connBwMin+random.nextDouble()*(connBwMax-connBwMin);
+		double maxLatency=connLatMin+random.nextDouble()*(connLatMax-connLatMin);
+		new Connector(bwReq,maxLatency,v1,v2);
 	}
 
 	/**
 	 * Create an application targeted to the given fog colony. The idPrefix should
-	 * be unique among the applications, e.g., c1.2 for application 2 in colony 1.
+	 * be unique among the applications, e.g., "c1.2." for application 2 in colony 1.
 	 * This prefix is used to create unique IDs for the components. The application
 	 * also includes a connection to a random end device of the fog colony.
 	 */
 	private static Application createApp(Colony region, String idPrefix) {
 		Application app=new Application();
+		boolean masterWorkersApp=random.nextBoolean();
 		for(int i=0;i<appSize;i++) {
-			double cpuReq=random.nextDouble()*5;
-			double ramReq=random.nextDouble()*5;
-			Component comp=new Component(idPrefix+i, cpuReq, ramReq, region);
+			double cpuReq=compCpuMin+random.nextDouble()*(compCpuMax-compCpuMin);
+			double ramReq=compRamMin+random.nextDouble()*(compRamMax-compRamMin);
+			Component comp=new Component(idPrefix+i,cpuReq,ramReq,region);
 			if(i>0) {
-				double bwReq=random.nextDouble()*3;
-				double maxLatency=random.nextDouble()*30+30;///
-				new Connector(bwReq, maxLatency, comp, app.getRandomComponent());
+				Component parent;
+				if(masterWorkersApp) //master-workers application
+					parent=app.getComponent(0);
+				else //sequential unidirectional dataflow application
+					parent=app.getComponent(i-1);
+				createConnector(comp,parent);
 			}
 			app.addComponent(comp);
 		}
-		/* ///
-		for(int i=0;i<appSize;i++) {
-			while(app.getComponent(i).getConnectors().size()<compGrade) {
-				int i0=random.nextInt(appSize);
-				if(i0!=i) {
-					double bwReq=random.nextDouble()*3;
-					double maxLatency=random.nextDouble()*20+20;///
-					new Connector(bwReq, maxLatency, app.getComponent(i), app.getComponent(i0));
-				}
-			}
-		}
-		*/
-		Component c=app.getRandomComponent();
+		if(!masterWorkersApp)
+			createConnector(app.getComponent(0),app.getComponent(appSize-1));
+		Component c=app.getComponent(0);
 		EndDevice d=region.getRandomEndDevice();
-		double bwReq=random.nextDouble()*2;
-		double maxLatency=random.nextDouble()*20+20;///
-		new Connector(bwReq, maxLatency, c, d);
+		createConnector(c,d);
 		return app;
 	}
 
