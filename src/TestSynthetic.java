@@ -1,12 +1,20 @@
 /**
- * Experiment driver class. Everything in this class is static, so that it does not
- * need to be instantiated, but can be used directly from the main() method.
+ * Experiment driver class based on synthetic test data.
  */
 public class TestSynthetic extends TestDriver {
+	/** Nr. of fog nodes per region */
+	protected int nrFogNodesPerRegion=10;
+	/** Nr. of end devices per region */
+	protected int nrEndDevicesPerRegion=10;
+	/** Nr. of additional links among servers after creating an initial tree architecture. This number of links is tried to be created; the actual number of created links may be less */
+	protected int nrAdditionalLinks=nrFogNodesPerRegion*2;
+	/** Nr. of servers connected to an end device */
+	protected int nrNeighborsOfEndDevice=2;
 
 	/**
 	 * Creates the infrastructure, including the colonies, and the path information.
 	 */
+	@Override
 	protected void createInfra() {
 		infra=new Infrastructure();
 		colonies=new Colony[nrRegions];
@@ -132,6 +140,7 @@ public class TestSynthetic extends TestDriver {
 	/**
 	 * Create all applications.
 	 */
+	@Override
 	protected void createApps() {
 		for(int j=0;j<nrAppsPerRegion;j++) {
 			for(int i=0;i<nrRegions;i++) {

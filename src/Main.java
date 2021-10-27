@@ -1,6 +1,9 @@
 import java.io.IOException;
 import java.util.Random;
 
+/**
+ * Main class to start an experiment.
+ */
 public class Main {
 	/** Random generator that can be used by any class in the program */
 	public static Random random;
@@ -13,6 +16,7 @@ public class Main {
 		TestDriver testDriver;
 		//testDriver=new TestSynthetic();
 		testDriver=new TestReal();
-		testDriver.doTest();
+		for(int i=0;i<2;i++)
+			testDriver.doTest("_"+i);
 	}
 }

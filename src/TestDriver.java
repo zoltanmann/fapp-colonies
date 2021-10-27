@@ -2,23 +2,19 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Set;
 
+/**
+ * Abstract ancestor class for different experiments.
+ */
 public abstract class TestDriver {
-
+	/** The types of solvers to test */
 	enum SolverType {SolverSB, SolverILP}
-	/** Nr. of fog nodes per region */
-	protected int nrFogNodesPerRegion=10;
+
 	/** Nr. of regions */
 	protected int nrRegions=5;
 	/** Nr. of applications per region */
 	protected int nrAppsPerRegion=5;
-	/** Nr. of fog components per application */
-	protected int appSize=5;
-	/** Nr. of end devices per region */
-	protected int nrEndDevicesPerRegion=10;
-	/** Nr. of additional links among servers after creating an initial tree architecture. This number of links is tried to be created; the actual number of created links may be less */
-	protected int nrAdditionalLinks=nrFogNodesPerRegion*2;
-	/** Nr. of servers connected to an end device */
-	protected int nrNeighborsOfEndDevice=2;
+	/** Nr. of components per application */
+	protected int appSize=12;
 	/** Nr. of fog nodes per colony that will be shared with each neighboring colony  */
 	protected int nrNodesToShareWithNeighbor=1;
 
@@ -29,13 +25,15 @@ public abstract class TestDriver {
 	/** To accelerate experiments, the centralized approach can be switched off with this flag */
 	protected boolean skipModel1=false;
 
+	/** Creation of the infrastructure, delegated to inheriting classes */
 	protected abstract void createInfra();
+	/** Creation of the applications, delegated to inheriting classes */
 	protected abstract void createApps();
 
 	/**
 	 * Perform the experiments.
 	 */
-	private void doExperiment() throws IOException {
+	private void doExperiment(String fileNameSuffix) throws IOException {
 		//create Conductors, together with the corresponding BookKeepers and Solvers
 		Map2d<Conductor.ModeType,SolverType,Conductor> conductors=new Map2d<>();
 		for(Conductor.ModeType modeType : Conductor.ModeType.values()) {
@@ -67,7 +65,7 @@ public abstract class TestDriver {
 			}
 		}
 		//initialize file output
-		FileWriter fileWriter=new FileWriter("results_detail.csv");
+		FileWriter fileWriter=new FileWriter("results_detail"+fileNameSuffix+".csv");
 		fileWriter.write("App;NrRegions");
 		for(Conductor.ModeType mode : Conductor.ModeType.values()) {
 			for(SolverType solver : SolverType.values()) {
@@ -123,7 +121,7 @@ public abstract class TestDriver {
 		}
 		fileWriter.close();
 		//write aggregated results to the other file
-		fileWriter=new FileWriter("results_total.csv");
+		fileWriter=new FileWriter("results_total"+fileNameSuffix+".csv");
 		fileWriter.write("Model;Solver;Success;TimeMs;Migrations\n");
 		for(Conductor.ModeType mode : Conductor.ModeType.values()) {
 			for(SolverType solver : SolverType.values()) {
@@ -133,9 +131,12 @@ public abstract class TestDriver {
 		fileWriter.close();
 	}
 
-	public void doTest() throws IOException {
+	/**
+	 * Create infrastructure and applications, and perform the experiments.
+	 */
+	public void doTest(String fileNameSuffix) throws IOException {
 		createInfra();
 		createApps();
-		doExperiment();
+		doExperiment(fileNameSuffix);
 	}
 }

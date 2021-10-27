@@ -1,30 +1,50 @@
 /**
  * Experiment driver class based on real-world data from Djemai et al.: "A Discrete Particle Swarm 
- * Optimization approach for Energy-efficient IoT services placement over Fog infrastructures".
- * Everything in this class is static, so that it does not need to be instantiated, but can be used 
- * directly from the main() method.
+ * Optimization approach for Energy-efficient IoT services placement over Fog infrastructures" and 
+ * from Xia et al.: "Combining Hardware Nodes and Software Components Ordering-based Heuristics for 
+ * Optimizing the Placement of Distributed IoT Applications in the Fog".
  */
 public class TestReal extends TestDriver {
 	/** Nr. of fog nodes per region */
-	private int nrL2FogNodesPerRegion=4;
-	/** Nr. of fog components per application */
-	private int appSize=3;
+	private int nrL2FogNodesPerRegion=12;
 	/** Nr. of end devices per fog node */
-	private static int nrEndDevicesPerFogNode=4;
-	private static double latencyBetweenColonies=100;
-	private static double bwBetweenColonies=100;
-	private static double compCpuMin=100;
-	private static double compCpuMax=500;
-	private static double compRamMin=100;
-	private static double compRamMax=500;
-	private static double connLatMin=25;
-	private static double connLatMax=50;
-	private static double connBwMin=0.01;
-	private static double connBwMax=0.6;
+	private int nrEndDevicesPerFogNode=4;
+
+	private double cpuCloud=120000;
+	private double ramCloud=64000;
+	private double cpuProxyServer=60000;
+	private double ramProxyServer=8000;
+	private double bwCloudProxyServer=10000;
+	private double latCloudProxyServer=100;
+	private double cpuEdgeSmall=6750;
+	private double ramEdgeSmall=1000;
+	private double cpuEdgeBig=13500;
+	private double ramEdgeBig=2000;
+	private double bwEdgeProxyServer=10000;
+	private double latEdgeProxyServer=2;
+	private double latD0IoT=100;
+	private double latD1IoT=20;
+	private double latD2IoT=50;
+	private double latD3IoT=12;
+	private double bwD0IoT=0.65;
+	private double bwD1IoT=1;
+	private double bwD2IoT=1000;
+	private double bwD3IoT=1000;
+	private double latencyBetweenColonies=50;
+	private double bwBetweenColonies=100;
+	private double compCpuMin=2500;
+	private double compCpuMax=5000;
+	private double compRamMin=500;
+	private double compRamMax=1000;
+	private double connLatMin=40;
+	private double connLatMax=200;
+	private double connBwMin=0.2;
+	private double connBwMax=0.6;
 
 	/**
 	 * Creates the infrastructure, including the colonies, and the path information.
 	 */
+	@Override
 	protected void createInfra() {
 		infra=new Infrastructure();
 		colonies=new Colony[nrRegions];
@@ -47,43 +67,43 @@ public class TestReal extends TestDriver {
 	 * cloud) with the given index.
 	 */
 	private void createRegion(int index) {
-		Server cloud=new Server("cloud"+index, 120000, 64000, true);
+		Server cloud=new Server("cloud"+index,cpuCloud,ramCloud,true);
 		infra.addServer(cloud);
 		colonies[index].addServer(cloud);
-		Server proxyServer=new Server("proxy"+index, 60000, 8000, false);
+		Server proxyServer=new Server("proxy"+index,cpuProxyServer,ramProxyServer,false);
 		infra.addServer(proxyServer);
 		colonies[index].addServer(proxyServer);
-		new Link(10000,100,cloud,proxyServer);
+		new Link(bwCloudProxyServer,latCloudProxyServer,cloud,proxyServer);
 		int endDeviceIndex=0;
 		for(int i=0;i<nrL2FogNodesPerRegion;i++) {
 			String serverId="s"+index+"."+i;
 			double cpuCap,ramCap;
 			int nodeType=i%4;
 			if(nodeType<2) {
-				cpuCap=6750;
-				ramCap=1000;
+				cpuCap=cpuEdgeSmall;
+				ramCap=ramEdgeSmall;
 			} else {
-				cpuCap=13500;
-				ramCap=2000;
+				cpuCap=cpuEdgeBig;
+				ramCap=ramEdgeBig;
 			}
 			Server s=new Server(serverId,cpuCap,ramCap,false);
 			infra.addServer(s);
 			colonies[index].addServer(s);
-			new Link(10000,2,s,proxyServer);
+			new Link(bwEdgeProxyServer,latEdgeProxyServer,s,proxyServer);
 			for(int j=0;j<nrEndDevicesPerFogNode;j++) {
 				EndDevice d=new EndDevice("d"+index+"."+endDeviceIndex);
 				endDeviceIndex++;
 				infra.addEndDevice(d);
 				colonies[index].addEndDevice(d);
 				double bw,latency;
-				if(i%4==0) latency=1000;
-				else if(i%4==1) latency=20;
-				else if(i%4==2) latency=50;
-				else latency=12;
-				if(j%4==0) bw=0.25;
-				else if(j%4==1) bw=1;
-				else if(j%4==2) bw=1000;
-				else bw=1000;
+				if(i%4==0) latency=latD0IoT;
+				else if(i%4==1) latency=latD1IoT;
+				else if(i%4==2) latency=latD2IoT;
+				else latency=latD3IoT;
+				if(j%4==0) bw=bwD0IoT;
+				else if(j%4==1) bw=bwD1IoT;
+				else if(j%4==2) bw=bwD2IoT;
+				else bw=bwD3IoT;
 				new Link(bw,latency,d,s);
 			}
 		}
@@ -144,10 +164,11 @@ public class TestReal extends TestDriver {
 	/**
 	 * Create all applications.
 	 */
+	@Override
 	protected void createApps() {
 		for(int j=0;j<nrAppsPerRegion;j++) {
 			for(int i=0;i<nrRegions;i++) {
-				Application app=createApp(colonies[i], "c"+i+"."+j+".");
+				Application app=createApp(colonies[i],"c"+i+"."+j+".");
 				colonies[i].addApplication(app);
 			}
 		}
