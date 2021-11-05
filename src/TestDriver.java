@@ -16,7 +16,7 @@ public abstract class TestDriver {
 	/** Nr. of components per application */
 	protected int appSize=12;
 	/** Nr. of fog nodes per colony that will be shared with each neighboring colony  */
-	protected int nrNodesToShareWithNeighbor=1;
+	protected int nrNodesToShareWithNeighbor=2;
 
 	/** The complete infrastructure */
 	protected Infrastructure infra;

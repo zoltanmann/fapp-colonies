@@ -6,7 +6,7 @@
  */
 public class TestReal extends TestDriver {
 	/** Nr. of fog nodes per region */
-	private int nrL2FogNodesPerRegion=12;
+	private int nrL2FogNodesPerRegion=60;
 	/** Nr. of end devices per fog node */
 	private int nrEndDevicesPerFogNode=4;
 
