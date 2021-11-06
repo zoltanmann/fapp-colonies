@@ -11,9 +11,9 @@ import java.util.Set;
  * Search-based solver. Solves the optimization problem by trying to place new
  * components one by one. If this is not successful, the algorithm tries to 
  * migrate some already placed components to see if this way more components can 
- * be placed. Note that the solver is stateless (the state is maintained by the 
- * BookKeeper), i.e., the same solver object can be applied to different problem 
- * instances.
+ * be placed. Note that the solver does not maintain its state between invocations 
+ * (the state is maintained by the BookKeeper), i.e., the same solver object can 
+ * be applied to different problem instances.
  */
 public class SolverSB implements ISolver {
 	/** Reference to the bookKeeper */
@@ -173,7 +173,7 @@ public class SolverSB implements ISolver {
 
 	/**
 	 * Tries to route the given connector between the given infrastructure nodes.
-	 * Returns either a valid path or null if no valid path could not be found.
+	 * Returns either a valid path or null if no valid path could be found.
 	 */
 	private Path findRoute(Connector conn,IHwNode n1,IHwNode n2,Set<IHwNode> allHwNodes) {
 		for(Path p : bookKeeper.getInfra().getPaths(n1,n2)) {
@@ -267,6 +267,7 @@ public class SolverSB implements ISolver {
 	 * Try to migrate the given component on the given server AND to re-route each connector that is 
 	 * incident to the given component and goes to an already placed component or to an end device. 
 	 * If successful, return true. Otherwise, undo the changes and return false.
+	 * PRE: c is already placed.
 	 */
 	private boolean tryToMigrate(Component c,Server newServer,Colony ourColony,Set<IHwNode> allHwNodes,Conductor.ModeType mode) {
 		int startSize=actionStack.getSize();
