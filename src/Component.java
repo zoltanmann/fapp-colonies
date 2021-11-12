@@ -13,14 +13,14 @@ public class Component implements ISwNode {
 	private double ramReq;
 	/** Set of connectors incident to the component */
 	private Set<Connector> connectors;
-	/** The fog colony that this component (actually, the whole application) is designated for */
-	private Colony targetColony;
+	/** The identifier of the fog colony that this component (actually, the whole application) is designated for */
+	private int targetColony;
 
 	/**
 	 * Construct Component with the given attributes. The set of incident connectors
 	 * is initialized to be empty.
 	 */
-	public Component(String id, double cpuReq, double ramReq, Colony targetColony) {
+	public Component(String id, double cpuReq, double ramReq, int targetColony) {
 		this.id=id;
 		this.cpuReq = cpuReq;
 		this.ramReq = ramReq;
@@ -50,10 +50,10 @@ public class Component implements ISwNode {
 	}
 
 	/** 
-	 * Return the colony that the component (actually, the application that the 
-	 * component belongs to) is designated for.
+	 * Return the identifier number of the colony that the component (actually, the 
+	 * application that the component belongs to) is designated for.
 	 */
-	public Colony getTargetColony() {
+	public int getTargetColony() {
 		return targetColony;
 	}
 

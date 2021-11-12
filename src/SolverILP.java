@@ -295,9 +295,9 @@ public class SolverILP implements ISolver {
 			if(mode==Conductor.ModeType.communicating) {
 				//A component that colony k received from colony k' may only be placed in k or k'
 				for(Component c : obtainedComponents) {
-					Colony targetColony=c.getTargetColony();
+					int targetColony=c.getTargetColony();
 					for(Server s : servers) {
-						if(!ourColony.getServers().contains(s) && !targetColony.getServers().contains(s)) {
+						if(!ourColony.getServers().contains(s) && !s.belongsToColony(targetColony)) {
 							GRBVar xVar=x.get(c, s);
 							GRBLinExpr expr = new GRBLinExpr();
 							expr.addTerm(1, xVar);

@@ -19,7 +19,7 @@ public class TestSynthetic extends TestDriver {
 		infra=new Infrastructure();
 		colonies=new Colony[nrRegions];
 		for(int i=0;i<nrRegions;i++) {
-			colonies[i]=new Colony();
+			colonies[i]=new Colony(i);
 			createRegion(i);
 		}
 		for(int i=0;i<nrRegions;i++) {
@@ -37,14 +37,14 @@ public class TestSynthetic extends TestDriver {
 	 * cloud) with the given index.
 	 */
 	private void createRegion(int index) {
-		Server cloud=new Server("cloud"+index, 1000000, 1000000, true);
+		Server cloud=new Server("cloud"+index,1000000,1000000,true,index);
 		infra.addServer(cloud);
 		colonies[index].addServer(cloud);
 		for(int i=0;i<nrFogNodesPerRegion;i++) {
 			String serverId="s"+index+"."+i;
 			double cpuCap=Main.random.nextDouble()*9+1;
 			double ramCap=Main.random.nextDouble()*9+1;
-			Server s=new Server(serverId,cpuCap,ramCap,false);
+			Server s=new Server(serverId,cpuCap,ramCap,false,index);
 			if(i>0) {
 				Server s0=colonies[index].getRandomServer();
 				double bw=Main.random.nextDouble()*4+1;
@@ -109,7 +109,7 @@ public class TestSynthetic extends TestDriver {
 		for(int i=0;i<appSize;i++) {
 			double cpuReq=Main.random.nextDouble()*5;
 			double ramReq=Main.random.nextDouble()*5;
-			Component comp=new Component(idPrefix+i, cpuReq, ramReq, region);
+			Component comp=new Component(idPrefix+i,cpuReq,ramReq,region.getNr());
 			if(i>0) {
 				double bwReq=Main.random.nextDouble()*3;
 				double maxLatency=Main.random.nextDouble()*30+30;///

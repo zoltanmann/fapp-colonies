@@ -46,7 +46,7 @@ public class Conductor {
 			unpreferredServers=new HashSet<>();
 			fullyControlledComponents=new HashSet<>();
 			for(Component c : bookKeeper.getComponents(colony)) {
-				if(c.getTargetColony()==colony) //need this to ensure we do not take components targeted to other colonies that reside in the shared cloud
+				if(c.getTargetColony()==colony.getNr()) //need this to ensure we do not take components targeted to other colonies that reside in the shared cloud
 					fullyControlledComponents.add(c);
 			}
 			obtainedComponents=new HashSet<>();
@@ -65,9 +65,10 @@ public class Conductor {
 			obtainedComponents=new HashSet<>();
 			readOnlyComponents=new HashSet<>();
 			for(Component c : bookKeeper.getComponents(colony)) {
-				if(c.getTargetColony()==colony)
+				if(c.getTargetColony()==colony.getNr())
 					fullyControlledComponents.add(c);
-				else if(colony.getNeighbors().contains(c.getTargetColony()))
+				//else if(colony.getNeighbors().contains(c.getTargetColony()))
+				else
 					obtainedComponents.add(c);
 			}
 			for(Colony neiCol : colony.getNeighbors()) {
@@ -94,7 +95,7 @@ public class Conductor {
 			unpreferredServers=colony.getSharedNodes();
 			fullyControlledComponents=new HashSet<>();
 			for(Component c : bookKeeper.getComponents(colony)) {
-				if(c.getTargetColony()==colony)
+				if(c.getTargetColony()==colony.getNr())
 					fullyControlledComponents.add(c);
 			}
 			obtainedComponents=new HashSet<>();

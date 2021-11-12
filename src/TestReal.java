@@ -1,12 +1,10 @@
 /**
  * Experiment driver class based on real-world data from Djemai et al.: "A Discrete Particle Swarm 
- * Optimization approach for Energy-efficient IoT services placement over Fog infrastructures" and 
- * from Xia et al.: "Combining Hardware Nodes and Software Components Ordering-based Heuristics for 
- * Optimizing the Placement of Distributed IoT Applications in the Fog".
+ * Optimization approach for Energy-efficient IoT services placement over Fog infrastructures".
  */
 public class TestReal extends TestDriver {
 	/** Nr. of fog nodes per region */
-	private int nrL2FogNodesPerRegion=60;
+	private int nrL2FogNodesPerRegion=12;
 	/** Nr. of end devices per fog node */
 	private int nrEndDevicesPerFogNode=4;
 
@@ -49,7 +47,7 @@ public class TestReal extends TestDriver {
 		infra=new Infrastructure();
 		colonies=new Colony[nrRegions];
 		for(int i=0;i<nrRegions;i++) {
-			colonies[i]=new Colony();
+			colonies[i]=new Colony(i);
 			createRegion(i);
 		}
 		for(int i=0;i<nrRegions;i++) {
@@ -67,10 +65,10 @@ public class TestReal extends TestDriver {
 	 * cloud) with the given index.
 	 */
 	private void createRegion(int index) {
-		Server cloud=new Server("cloud"+index,cpuCloud,ramCloud,true);
+		Server cloud=new Server("cloud"+index,cpuCloud,ramCloud,true,index);
 		infra.addServer(cloud);
 		colonies[index].addServer(cloud);
-		Server proxyServer=new Server("proxy"+index,cpuProxyServer,ramProxyServer,false);
+		Server proxyServer=new Server("proxy"+index,cpuProxyServer,ramProxyServer,false,index);
 		infra.addServer(proxyServer);
 		colonies[index].addServer(proxyServer);
 		new Link(bwCloudProxyServer,latCloudProxyServer,cloud,proxyServer);
@@ -86,7 +84,7 @@ public class TestReal extends TestDriver {
 				cpuCap=cpuEdgeBig;
 				ramCap=ramEdgeBig;
 			}
-			Server s=new Server(serverId,cpuCap,ramCap,false);
+			Server s=new Server(serverId,cpuCap,ramCap,false,index);
 			infra.addServer(s);
 			colonies[index].addServer(s);
 			new Link(bwEdgeProxyServer,latEdgeProxyServer,s,proxyServer);
@@ -142,7 +140,7 @@ public class TestReal extends TestDriver {
 		for(int i=0;i<appSize;i++) {
 			double cpuReq=compCpuMin+Main.random.nextDouble()*(compCpuMax-compCpuMin);
 			double ramReq=compRamMin+Main.random.nextDouble()*(compRamMax-compRamMin);
-			Component comp=new Component(idPrefix+i,cpuReq,ramReq,region);
+			Component comp=new Component(idPrefix+i,cpuReq,ramReq,region.getNr());
 			if(i>0) {
 				Component parent;
 				if(masterWorkersApp) //master-workers application

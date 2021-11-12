@@ -14,7 +14,7 @@ public abstract class TestDriver {
 	/** Nr. of applications per region */
 	protected int nrAppsPerRegion=5;
 	/** Nr. of components per application */
-	protected int appSize=12;
+	protected int appSize=36;
 	/** Nr. of fog nodes per colony that will be shared with each neighboring colony  */
 	protected int nrNodesToShareWithNeighbor=2;
 
@@ -24,6 +24,8 @@ public abstract class TestDriver {
 	protected Colony colonies[];
 	/** To accelerate experiments, the centralized approach can be switched off with this flag */
 	protected boolean skipModel1=false;
+	/** To accelerate experiments, the ILP algorithm can be switched off with this flag */
+	protected boolean skipIlp=false;
 
 	/** Creation of the infrastructure, delegated to inheriting classes */
 	protected abstract void createInfra();
@@ -38,6 +40,8 @@ public abstract class TestDriver {
 		Map2d<Conductor.ModeType,SolverType,Conductor> conductors=new Map2d<>();
 		for(Conductor.ModeType modeType : Conductor.ModeType.values()) {
 			for(SolverType solverType : SolverType.values()) {
+				if(solverType==SolverType.SolverILP && skipIlp)
+					continue;
 				BookKeeper bookKeeper=new BookKeeper(infra);
 				ISolver solver=null;
 				if(solverType==SolverType.SolverILP)
@@ -59,8 +63,11 @@ public abstract class TestDriver {
 				if(colonies[i].isAdjacentTo(colonies[j])) {
 					bigColonies[i].addNeighbor(bigColonies[j]);
 					Set<Server> shared=bigColonies[i].shareNodes(nrNodesToShareWithNeighbor);
-					for(Server s : shared)
+					for(Server s : shared) {
 						bigColonies[j].addServer(s);
+						bigColonies[j].markShared(s);
+						s.addToColony(j);
+					}
 				}
 			}
 		}
@@ -69,6 +76,8 @@ public abstract class TestDriver {
 		fileWriter.write("App;NrRegions");
 		for(Conductor.ModeType mode : Conductor.ModeType.values()) {
 			for(SolverType solver : SolverType.values()) {
+				if(solver==SolverType.SolverILP && skipIlp)
+					continue;
 				String postfix="-"+mode+"-"+solver;
 				fileWriter.write(";Success"+postfix+";TimeMs"+postfix+";Migrations"+postfix);
 			}
@@ -78,6 +87,8 @@ public abstract class TestDriver {
 		Map2d<Conductor.ModeType,SolverType,Result> grandTotalResults=new Map2d<>();
 		for(Conductor.ModeType mode : Conductor.ModeType.values()) {
 			for(SolverType solver : SolverType.values()) {
+				if(solver==SolverType.SolverILP && skipIlp)
+					continue;
 				grandTotalResults.put(mode,solver,new Result());
 			}
 		}
@@ -87,6 +98,8 @@ public abstract class TestDriver {
 			Map2d<Conductor.ModeType,SolverType,Result> totalResults=new Map2d<>();
 			for(Conductor.ModeType mode : Conductor.ModeType.values()) {
 				for(SolverType solver : SolverType.values()) {
+					if(solver==SolverType.SolverILP && skipIlp)
+						continue;
 					totalResults.put(mode,solver,new Result());
 				}
 			}
@@ -95,6 +108,8 @@ public abstract class TestDriver {
 				Application app=colonies[i].getApplication(j);
 				for(Conductor.ModeType mode : Conductor.ModeType.values()) {
 					for(SolverType solver : SolverType.values()) {
+						if(solver==SolverType.SolverILP && skipIlp)
+							continue;
 						System.out.println("app "+j+", region "+i+", model "+mode+", solver "+solver);
 						if(skipModel1 && mode==Conductor.ModeType.centralized)
 							continue;
@@ -111,6 +126,8 @@ public abstract class TestDriver {
 			fileWriter.write(String.format("%d;%d",j,nrRegions));
 			for(Conductor.ModeType mode : Conductor.ModeType.values()) {
 				for(SolverType solver : SolverType.values()) {
+					if(solver==SolverType.SolverILP && skipIlp)
+						continue;
 					fileWriter.write(";"+totalResults.get(mode,solver).toString());
 					fileWriter.flush();
 					grandTotalResults.get(mode,solver).increaseBy(totalResults.get(mode,solver));
@@ -125,6 +142,8 @@ public abstract class TestDriver {
 		fileWriter.write("Model;Solver;Success;TimeMs;Migrations\n");
 		for(Conductor.ModeType mode : Conductor.ModeType.values()) {
 			for(SolverType solver : SolverType.values()) {
+				if(solver==SolverType.SolverILP && skipIlp)
+					continue;
 				fileWriter.write(""+mode+";"+solver+";"+grandTotalResults.get(mode,solver).toString()+"\n");
 			}
 		}

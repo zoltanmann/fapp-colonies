@@ -21,17 +21,27 @@ public class Colony {
 	private List<Application> applications;
 	/** The set of servers shared with neighboring colonies */
 	private Set<Server> sharedNodes;
+	/** An identifier number of the colony (important: the big colony has the same number as the small one) */
+	private int nr;
 
 	/**
 	 * Construct empty colony.
 	 */
-	public Colony() {
+	public Colony(int nr) {
+		this.nr=nr;
 		nodes=new HashSet<>();
 		servers=new ArrayList<>();
 		endDevices=new ArrayList<>();
 		neighbors=new HashSet<>();
 		applications=new ArrayList<>();
 		sharedNodes=new HashSet<>();
+	}
+
+	/**
+	 * Returns the identifier number of the colony.
+	 */
+	public int getNr() {
+		return nr;
 	}
 
 	/**
@@ -144,6 +154,13 @@ public class Colony {
 	}
 
 	/**
+	 * Mark the given server as shared. PRE: s is already a server in this colony.
+	 */
+	public void markShared(Server s) {
+		sharedNodes.add(s);
+	}
+
+	/**
 	 * Return the set of fog nodes shared with neighboring colonies.
 	 */
 	public Set<Server> getSharedNodes() {
@@ -151,10 +168,10 @@ public class Colony {
 	}
 
 	/**
-	 * Return a shallow copy of this colony.
+	 * Return a shallow copy of this colony. The new colony has the same identifier number as this one.
 	 */
 	public Colony clone() {
-		Colony other=new Colony();
+		Colony other=new Colony(nr);
 		other.nodes.addAll(nodes);
 		other.servers.addAll(servers);
 		other.endDevices.addAll(endDevices);

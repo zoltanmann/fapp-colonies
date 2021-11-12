@@ -210,8 +210,8 @@ public class SolverSB implements ISolver {
 		boolean success=true;
 		if(mode==Conductor.ModeType.communicating) {
 			//A component that colony k received from colony k' may only be placed in k or k' 
-			Colony targetColony=c.getTargetColony();
-			if(targetColony!=ourColony && !ourColony.getServers().contains(s) && !targetColony.getServers().contains(s))
+			int targetColony=c.getTargetColony();
+			if(targetColony!=ourColony.getNr() && !ourColony.getServers().contains(s) && !s.belongsToColony(targetColony))
 				return false;
 			//If a neighbor of c is in colony k', then c must not be placed in a colony k'' different from both k' and our colony k
 			if(!ourColony.getServers().contains(s)) {
@@ -309,6 +309,7 @@ public class SolverSB implements ISolver {
 			Colony ourColony,
 			Conductor.ModeType mode) {
 		long startTime=System.currentTimeMillis();
+		//System.out.println("fullyControlledComponents: "+fullyControlledComponents.size());
 		Map<Component,Server> oldAlpha=bookKeeper.getAlpha(); //we save it so that we can compute the number of migrations in the end
 		Result result=new Result();
 		List<Server> servers=union(freelyUsableServers,unpreferredServers);
@@ -345,33 +346,50 @@ public class SolverSB implements ISolver {
 			for(Component c : nextLevelComps)
 				distanceFromEndDevices.put(c,level);
 		}
-		/*
-		Collections.sort(componentsToPlace,new Comparator<Component>() { //we sort the components to be placed in increasing order of their size
-			@Override
-			public int compare(Component lhs,Component rhs) {
-				return Double.compare(lhs.getCpuReq()*lhs.getRamReq(),rhs.getCpuReq()*rhs.getRamReq());
-			}
-		});
-		*/
 		Collections.sort(componentsToPlace,new Comparator<Component>() { //we sort the components to be placed in decreasing order of their distance from end devices
 			@Override
 			public int compare(Component lhs,Component rhs) {
 				return Integer.compare(distanceFromEndDevices.get(rhs),distanceFromEndDevices.get(lhs));
 			}
 		});
+		//find the end devices connected to the application to place
+		Set<EndDevice> importantEndDevices=new HashSet<>();
+		for(Component comp : newComponents) {
+			for(Connector conn : comp.getConnectors()) {
+				ISwNode other=conn.getOtherVertex(comp);
+				if(other.isEndDevice())
+					importantEndDevices.add((EndDevice)other);
+			}
+		}
+		if(importantEndDevices.isEmpty()) //it is important that this set is not empty
+			importantEndDevices.addAll(endDevices);
+		//compute for each server its distance from the end devices connected to the application to place
+		Map<Server,Integer> distanceFromImportantEndDevices=new HashMap<>();
+		for(Server s : servers) {
+			for(EndDevice ed : importantEndDevices) {
+				int dist=-1;
+				for(Path p : bookKeeper.getInfra().getPaths(ed,s)) {
+					if(p.getLinks().size()<dist || dist==-1)
+						dist=p.getLinks().size();
+				}
+				if(!distanceFromImportantEndDevices.containsKey(s) || dist<distanceFromImportantEndDevices.get(s))
+					distanceFromImportantEndDevices.put(s,dist);
+			}
+		}
+		Collections.sort(servers,new Comparator<Server>() { //we sort the servers such that the best servers are at the beginning
+			@Override
+			public int compare(Server lhs,Server rhs) {
+				if(freelyUsableServers.contains(lhs) && unpreferredServers.contains(rhs))
+					return -1; // the freely usable servers are first, the unpreferred servers only after them
+				if(freelyUsableServers.contains(rhs) && unpreferredServers.contains(lhs))
+					return 1;
+				return Integer.compare(distanceFromImportantEndDevices.get(lhs),distanceFromImportantEndDevices.get(rhs)); //within a category, servers that are closer to the relevant end devices are better
+			}
+		});
+		//now the actual algorithm can start
 		int beginning=actionStack.getSize();
 		while(componentsToPlace.size()>0) {
 			Component newComp=componentsToPlace.remove(componentsToPlace.size()-1); //we pick the component that is nearest to the end devices
-			Collections.sort(servers,new Comparator<Server>() { //we sort the servers such that the best servers are at the beginning. This has to be repeated each time, since the free capacity of servers may change
-				@Override
-				public int compare(Server lhs,Server rhs) {
-					if(freelyUsableServers.contains(lhs) && unpreferredServers.contains(rhs))
-						return -1; // the freely usable servers are first, the unpreferred servers only after them
-					if(freelyUsableServers.contains(rhs) && unpreferredServers.contains(lhs))
-						return 1;
-					return Double.compare(bookKeeper.getFreeCpuCap(rhs)*bookKeeper.getFreeRamCap(rhs),bookKeeper.getFreeCpuCap(lhs)*bookKeeper.getFreeRamCap(lhs)); //within a category, servers with more free capacity are better
-				}
-			});
 			//try to place the component on one of the servers
 			boolean succeeded=false;
 			for(Server server : servers) {

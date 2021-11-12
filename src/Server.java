@@ -15,16 +15,19 @@ public class Server implements IHwNode {
 	private Set<Link> links;
 	/** Whether this is the cloud */
 	private boolean bCloud;
+	/** Set of colonies to which this server belongs */
+	private Set<Integer> colonies;
 
 	/**
 	 * Constructs a server with the given attributes and an empty set of incident links.
 	 */
-	public Server(String id, double cpuCap, double ramCap, boolean bCloud) {
+	public Server(String id,double cpuCap,double ramCap,boolean bCloud,int colony) {
 		this.id=id;
 		this.cpuCap = cpuCap;
 		this.ramCap = ramCap;
 		this.bCloud=bCloud;
 		links=new HashSet<>();
+		colonies=new HashSet<>();
 	}
 
 	/**
@@ -67,6 +70,20 @@ public class Server implements IHwNode {
 	 */
 	public void removeLink(Link link) {
 		links.remove(link);
+	}
+
+	/**
+	 * Add this server to the colony with the given identifier number.
+	 */
+	public void addToColony(int colony) {
+		colonies.add(colony);
+	}
+
+	/**
+	 * Determines if this server belongs to the coloy with the given identifier number.
+	 */
+	public boolean belongsToColony(int colony) {
+		return colonies.contains(colony);
 	}
 
 	/**
